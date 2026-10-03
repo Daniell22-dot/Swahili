@@ -1,0 +1,14 @@
+# --------------------------------------------------------
+#  Hisabati — hisabati hisabati (math operations).
+#  Run: python -m swahili examples/hisabati.kisw
+# --------------------------------------------------------
+
+# Hisabati (hisabati) hisabati hisabati
+andika f"10 + 5 = {10 + 5}"
+andika f"10 - 3 = {10 - 3}"
+andika f"10 * 5 = {10 * 5}"
+andika f"10 / 3 = {10 / 3}"
+andika f"10 % 3 = {10 % 3}"
+
+# Farewell
+andika "Hisabati imeanza!"
