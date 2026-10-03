@@ -1,0 +1,61 @@
+# --------------------------------------------------------
+#  Duka — darasa, orodha na hesabu pamoja.
+#  Run: python -m swahili examples/duka.kisw
+# --------------------------------------------------------
+
+darasa Bidhaa {
+    jina                       # sifa (field)
+    bei
+    idadi_katika_hifadhi
+
+    #  mjenzi: kazi yenye jina sawa na darasa
+    kazi Bidhaa(jina, bei, idadi_katika_hifadhi = 0) {
+        mwenyewe.jina = jina
+        mwenyewe.bei = bei
+        mwenyewe.idadi_katika_hifadhi = idadi_katika_hifadhi
+    }
+
+    kazi jumla() {
+        rudia mwenyewe.bei * mwenyewe.idadi_katika_hifadhi
+    }
+
+    kazi ongeza_kidhi(namba) {
+        mwenyewe.idadi_katika_hifadhi += namba
+        rudia mwenyewe
+    }
+
+    kazi imeisha() {
+        kama mwenyewe.idadi_katika_hifadhi <= 0 { rudia kweli }
+        rudia sikweli
+    }
+}
+
+orodha duka = [
+    tengeneza Bidhaa("maziwa ya kahawa", 1200, 10),
+    tengeneza Bidhaa("mkate",            350),
+    tengeneza Bidhaa("safi ya meno",      800, 4),
+    tengeneza Bidhaa("chai",             200, 25),
+]
+
+andika "=== Karibu dukani ==="
+andika ""
+
+kila bidhaa kwenye duka {
+    kama bidhaa.imeisha() {
+        andika f"  {bidhaa.jina} — IMEISHA"
+    } vingo {
+        andika f"  {bidhaa.jina} — {bidhaa.bei} x {bidhaa.idadi_katika_hifadhi} = {bidhaa.jumla()}"
+    }
+}
+
+#  orodha ya kila kitu kinachopatikana
+orodha kina = duka.chomoa(kazi(b) { rudia sio b.imeisha() })
+andika ""
+andika f"Kitakao: {kina.idadi}  ya  bidhaa {duka.idadi}"
+andika f"Jumla ya hifadhi: {duka.pangamiza(kazi(b) { rudia b.jumla() }).jumlisha()}"
+
+#  mteja ananunua
+duka[1].ongeza_kidhi(6)
+andika ""
+andika "Baada ya ununuzi wa mkate:"
+andika f"  mkate sasa ni {duka[1].idadi_katika_hifadhi} kwenye hifadhi"

@@ -6,6 +6,8 @@ the language), then English so that nobody is locked out of their own compiler.
 
 from __future__ import annotations
 
+from typing import Any
+
 SEPARATOR = "=" * 62
 
 
@@ -112,5 +114,17 @@ class Endelea(Exception):
     """`endelea` — continue."""
 
 
-class TupaImbali(Exception):
-    """`tupa` — a user-thrown value travelling up the stack."""
+class TupaImbali(KiswahiliError):
+    """`tupa` — a user-thrown value travelling up the stack.
+
+    Subclasses `KiswahiliError` so that an uncaught `tupa` is reported like any
+    other runtime error instead of crashing with a traceback.
+    """
+
+    def __init__(self, thamani: Any):
+        self.thamani = thamani
+        super().__init__(f"Thamani imetupwa: {thamani}",
+                         f"Thrown value: {thamani}")
+
+    def __str__(self) -> str:
+        return self.render()

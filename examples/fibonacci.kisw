@@ -1,0 +1,28 @@
+# --------------------------------------------------------
+#  Fibonacci — kwa kila njia, kama hivi.
+#  Run: python -m swahili examples/fibonacci.kisw
+# --------------------------------------------------------
+
+kazi fibo(n) {
+    kama n < 2 { rudia n }
+    rudia fibo(n - 1) + fibo(n - 2)
+}
+
+#  0..15  ni kipeano: 0, 1, 2, ... 14
+kwa n kwenye 0..15 {
+    andika f"fibo({n}) = {fibo(n)}"
+}
+
+#  Njia ya kwanza: kila kitu kinachotolewa tayari (memoisation) kwa kamusi
+kamusi kumbukumbu = {}
+
+kazi fibo_kumbukumbu(n) {
+    kama n < 2 { rudia n }
+    kama kumbukumbu.ina(n) { rudia kumbukumbu[n] }
+    thamani = fibo_kumbukumbu(n - 1) + fibo_kumbukumbu(n - 2)
+    kumbukumbu[n] = thamani
+    rudia thamani
+}
+
+andika ""
+andika "Kwa kumbukumbu, fibo(40) = " + fibo_kumbukumbu(40)

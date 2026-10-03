@@ -49,10 +49,6 @@ CAN_START_EXPRESSION = {
 # tokens that close an argument list
 ARGUMENT_STOPS = {"NEWLINE", "SEMI", "RBRACE", "RPAREN", "RBRACKET", "EOF"}
 
-# `x[0] = 1` must not be mistaken for a call named `x`, so a bracket right
-# after the identifier never starts an implicit argument list.
-IMPLICIT_CALL_STARTERS = CAN_START_EXPRESSION - {"LBRACKET"}
-
 # operators that build a Compare node rather than an arithmetic Binary node
 COMPARE_OPS = {"EQ", "NEQ", "LT", "LTE", "GT", "GTE"}
 
@@ -181,9 +177,30 @@ class Parser:
 
     def _starts_implicit_call(self) -> bool:
         if self.tok.type != "IDENT" or self.tokens[self.current + 1].type \
-                not in IMPLICIT_CALL_STARTERS:
+                not in CAN_START_EXPRESSION:
+            return False
+        if self.tokens[self.current + 1].type == "LBRACKET" and self._is_index_assign():
             return False
         return not self._at_argument_stop()
+
+    def _is_index_assign(self) -> bool:
+        """True for `miji["Kisumu"] = 337_000` — an index *target*, not a call."""
+        depth = 0
+        index = self.current + 1
+        while index < len(self.tokens):
+            kind = self.tokens[index].type
+            if kind in ("LBRACKET", "LPAREN", "LBRACE"):
+                depth += 1
+            elif kind in ("RBRACKET", "RPAREN", "RBRACE"):
+                depth -= 1
+                if depth == 0:
+                    following = self.tokens[index + 1].type \
+                        if index + 1 < len(self.tokens) else "EOF"
+                    return following in ASSIGN_OPS
+            elif kind in ("NEWLINE", "EOF"):
+                return False
+            index += 1
+        return False
 
     def _at_argument_stop(self) -> bool:
         token = self.tok
@@ -322,6 +339,7 @@ class Parser:
         name = self.expect("IDENT", "jina la darasa").value
         self.expect("LBRACE", "'{' kuanza wazi")
         fields: list[str] = []
+        defaults: dict[str, ast.Node] = {}
         body: list[ast.Node] = []
         while not self.check("RBRACE") and not self._at_end():
             if self.match("SEMI", "NEWLINE"):
@@ -331,14 +349,16 @@ class Parser:
                 if self.tok.type in TYPE_TOKENS:
                     self.advance()
                 if self.check("IDENT"):
-                    fields.append(self.advance().value)
-                    self.match("ASSIGN")   # default value is set on the instance
+                    name = self.advance().value
+                    fields.append(name)
+                    if self.match("ASSIGN"):
+                        defaults[name] = self.expression()
                     self._end_statement()
                     continue
                 self.current = save
             body.append(self.statement())
         self.expect("RBRACE", "'}' kufunga darasa")
-        return ast.ClassDef(name, fields, ast.Block(body))
+        return ast.ClassDef(name, fields, ast.Block(body), defaults)
 
     def function_statement(self) -> ast.FuncDef:
         self.advance()  # kazi
@@ -353,8 +373,6 @@ class Parser:
             is_arrow = True
             if self.tok.type in TYPE_TOKENS:
                 ret_hint = TYPE_NAMES[self.advance().type]
-            elif self.check("IDENT"):
-                ret_hint = self.advance().value
 
         if self.match("ARROW"):
             is_arrow = True

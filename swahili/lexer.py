@@ -42,7 +42,7 @@ TYPE_TOKENS = {"INT_TYPE", "FLOAT_TYPE", "STRING_TYPE", "LIST_TYPE",
 PUNCTUATION = [
     ("**=", "POW_ASSIGN"), ("//=", "IDIV_ASSIGN"), ("...", "SPREAD"),
     ("+=", "ADD_ASSIGN"), ("-=", "SUB_ASSIGN"), ("*=", "MUL_ASSIGN"),
-    ("/=", "DIV_ASSIGN"), ("%=", "MOD_ASSIGN"), ("->", "ARROW"),
+    ("/=", "DIV_ASSIGN"), ("%=", "MOD_ASSIGN"), ("->", "ARROW"), ("=>", "ARROW"),
     ("**", "POW"), ("//", "IDIV"), ("..", "RANGE"),
     ("==", "EQ"), ("!=", "NEQ"), ("<=", "LTE"), (">=", "GTE"),
     ("+", "PLUS"), ("-", "MINUS"), ("*", "STAR"), ("/", "SLASH"),

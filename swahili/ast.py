@@ -262,6 +262,7 @@ class ClassDef(Node):
     name: str
     fields: list[str]
     body: Block
+    defaults: dict[str, Node] = field(default_factory=dict)
 
 
 @dataclass

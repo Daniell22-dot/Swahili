@@ -18,7 +18,7 @@ from .runtime import (BoundMethod, Environment, KiswahiliModule,
                       NativeFunction, SwahiliClass, SwahiliFunction,
                       SwahiliInstance, display, iterate, type_name)
 
-MAX_DEPTH = 800
+MAX_DEPTH = 200
 
 
 def is_truthy(value: Any) -> bool:
@@ -198,7 +198,7 @@ class Interpreter:
             node.type_hint, node.arrow_hint))
 
     def _exec_class_def(self, node: ast.ClassDef, env: Environment) -> None:
-        cls = SwahiliClass(node.name, node.fields, env)
+        cls = SwahiliClass(node.name, node.fields, env, node.defaults)
         env.define(node.name, cls)
         # methods live in their own scope so they do not leak into the
         # surrounding namespace, but still close over it
@@ -212,12 +212,17 @@ class Interpreter:
         try:
             try:
                 self.execute(node.body, env)
-            except (TupaImbali, KiswahiliError) as exc:
+            except TupaImbali as exc:
                 if node.handler_body is not None:
-                    value = exc.args[0] if isinstance(exc, TupaImbali) \
-                        else str(exc.swahili)
                     if node.handler:
-                        env.define(node.handler, value)
+                        env.define(node.handler, exc.thamani)
+                    self.execute(node.handler_body, env)
+                else:
+                    raise
+            except KiswahiliError as exc:
+                if node.handler_body is not None:
+                    if node.handler:
+                        env.define(node.handler, exc.swahili)
                     self.execute(node.handler_body, env)
                 else:
                     raise
@@ -472,6 +477,8 @@ class Interpreter:
                              f"'{node.class_name}' is not a class")
 
         instance = SwahiliInstance(cls)
+        for field, expression in cls.defaults.items():
+            instance.fields[field] = self.evaluate(expression, cls.closure)
         constructor = cls.methods.get(node.class_name)
         if constructor is not None:
             args = [self.evaluate(arg, env) for arg in node.args]
@@ -519,12 +526,16 @@ class Interpreter:
 
             if callable(fn):
                 return fn(*args, **kwargs)
-        except (KiswahiliError, TupaImbali, Rudeia, Vunja, Endelea):
+        except (KiswahiliError, Rudeia, Vunja, Endelea):
             raise
         except TypeError as exc:
             message = str(exc)
             raise self._oops(node, f"Agizo lisilo sahihi: {message}",
                              f"Bad call: {message}") from None
+        except RecursionError:
+            raise self._oops(node, "Mzunguko umerefuka sana",
+                             "Recursion went too deep",
+                             "Je, kazi inayoitisha yenyewe inakoseka kuimalisha?") from None
 
         where = type_name(fn)
         raise self._oops(node, f"{where} siwezi kuwekwa wazi",

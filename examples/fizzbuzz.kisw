@@ -1,0 +1,16 @@
+# --------------------------------------------------------
+#  FizzBuzz — mtihani wa kawaida, kwa Kiswahili.
+#  Run: python -m swahili examples/fizzbuzz.kisw
+# --------------------------------------------------------
+
+kwa n kwenye 1..21 {
+    kama n % 15 == 0 {
+        andika "FizzBuzz"
+    } vingo kama n % 3 == 0 {
+        andika "Fizz"
+    } vingo kama n % 5 == 0 {
+        andika "Buzz"
+    } vingo {
+        andika n
+    }
+}

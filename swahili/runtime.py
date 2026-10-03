@@ -97,13 +97,15 @@ class SwahiliFunction:
 
 
 class SwahiliClass:
-    __slots__ = ("name", "fields", "methods", "closure")
+    __slots__ = ("name", "fields", "methods", "closure", "defaults")
 
-    def __init__(self, name: str, fields: list[str], closure: Environment):
+    def __init__(self, name: str, fields: list[str], closure: Environment,
+                 defaults: dict[str, Any] | None = None):
         self.name = name
         self.fields = fields
         self.methods: dict[str, SwahiliFunction] = {}
         self.closure = closure
+        self.defaults = defaults or {}
 
     def __repr__(self) -> str:
         return f"<darasa {self.name}>"
