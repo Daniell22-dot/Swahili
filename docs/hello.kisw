@@ -1,0 +1,209 @@
+# ==========================================================
+#  HAPA KULINGANA!  /  WELCOME!
+#  Kiswahili — a general-purpose programming language in Kiswahili.
+#
+#  Run me:   python -m swahili docs/hello.kisw
+# ==========================================================
+
+
+# ---------- 1. MANENO  (strings) -------------------------
+jina = "Dunia"
+andika "Habari yako, " + jina + "!"          # Habari yako, Dunia!
+andika "Tabaka\tyote\n"
+
+
+# ---------- 2. NAMBA  (numbers) ---------------------------
+namba salamu   = 3
+desimali bei   = 1500.50
+namba kubwa    = 1_000_000
+
+andika salamu + 1            # 4            (namba stays namba)
+andika bei * 2               # 3001.0
+andika 7 / 2                 # 3.5          (division gives desimali)
+andika 7 // 2                # 3            (baki kamili)
+andika salamu % 2            # 1
+andika salamu ** 3           # 27           (kwa nguvu)
+
+
+# ---------- 3. KAZI  (functions) --------------------------
+#     default values, many arguments, recursion — all supported
+kazi salimia(jina, salamu = "Habari", alama = "!") {
+    rudia salamu + ", " + jina + alama
+}
+
+andika salimia("Amina")                     # Habari, Amina!
+andika salimia("Juma", "Mambo")             # Mambo, Juma!
+andika salimia("Zuri", "Asubuhi", "?")      # Asubuhi, Zuri?
+
+kazi fibo(n) {
+    kama n < 2 { rudia n }
+    rudia fibo(n - 1) + fibo(n - 2)
+}
+andika f"fibo(12) = {fibo(12)}"
+
+
+# ---------- 4. ORODHA  (lists) ---------------------------
+orodha matunda = ["apeti", "tufaha", "zanzibar"]
+
+andika matunda[0]              # apeti
+andika matunda[-1]             # zanzibar   (negative index works)
+andika idadi(matunda)          # 3
+andika matunda.idadi           # 3          (property form)
+
+matunda.ongeza("chungwa")
+andika matunda                 # ['apeti', 'tufaha', 'zanzibar', 'chungwa']
+
+#  'kila X kwenye Y'  =  "for each X in Y"
+kila tunda kwenye matunda {
+    andika "  - " + tunda
+}
+
+andika matunda[0:2]            # ['apeti', 'tufaha']   (slices)
+andika matunda.pindua()        # ['chungwa', 'zanzibar', 'tufaha', 'apeti']
+
+
+# ---------- 5. KAMUSI  (dictionaries) ---------------------
+kamusi miji = {"Mombasa": 1_200_000, "Dodoma": 400_000}
+
+andika miji["Dodoma"]          # 400000
+andika miji.funguo             # ['Mombasa', 'Dodoma']  (keys)
+andika miji.thamani            # [1200000, 400000]      (values)
+
+miji["Kisumu"] = 337_000
+kama miji.ina("Kisumu") { andika "Kisumu iko!" }
+
+
+# ---------- 6. UDOGO  (type names are conversion fns) -----
+andika ainake(42)              # namba
+andika ainake(4.2)             # desimali
+andika ainake("habari")        # maneno
+andika ainake(kweli)           # hali
+andika ainake(hakuna)          # hakuna
+andika ainake([1, 2])          # orodha
+andika ainake(kazi salimia)    # kazi
+
+andika namba("42") + 1         # 43
+andika desimali("1.5") * 2     # 3.0
+andika orodha("a,b,c".gawanya(","))   # ['a', 'b', 'c']
+
+
+# ---------- 7. MAJADILIANO  (control flow) -----------------
+namba alama = 85
+kama alama >= 90 {
+    andika "daraja: A"
+} vingo kama alama >= 80 {
+    andika "daraja: B"
+} vingo {
+    andika "daraja: C"
+}
+
+namba i = 0
+wakati i < 3 {
+    andika f"i = {i}"
+    i += 1
+}
+
+#  'kwa x kwenye 0..3'  iterates a range
+kwa n kwenye 1..4 {
+    kama n % 2 == 0 { endelea }      # continue
+    kama n == 3 { vunja }             # break
+    andika f"namba: {n}"
+}
+
+#  'chagua(cond) { A } vingo { B }'  = ternary
+andika chagua(i > 2) { "kubwa" } vingo { "ndogo" }
+
+
+# ---------- 8. UKURINGANO  (operators) --------------------
+andika 10 na 5                       # 'na' = and
+andika 10 au 5                       # 'au' = or
+andika sio kweli                     # 'not'
+andika "a" iko ["a", "b"]            # 'is in'  -> kweli
+andika "z" iko ["a", "b"]            #             sikweli
+andika 3 ni 3                        # 'is' (identity)
+andika "sw" * 3                      # 'swswsw'  (string repetition)
+andika kweli na sikweli              # sikweli
+
+
+# ---------- 9. KAZI-NKUU  (closures) ----------------------
+kazi mkataba(kiwango) {
+    rudia kazi(x) { rudia f"{x} kwenye {kiwango}" }
+}
+ikulu = mkataba(10)
+andika ikulu(7)                      # 7 kwenye 10
+
+
+# ---------- 10. MAKOSA  (errors) --------------------------
+kazi sali(idadi) {
+    kama idadi > 3 { tupa "IDADI kubwa mno!" }
+    rudia 100 / idadi
+}
+
+jaribu {
+    andika sali(2)
+    andika sali(9)
+} kosa k {
+    andika "Kosa: " + k
+} mwisho {
+    andika "-- mwisho --"
+}
+
+
+# ---------- 11. DARASA  (classes) -------------------------
+darasa Mwalimu {
+    jina            # field
+    somo           # field
+
+    kazi Mwalimu(jina, somo) {     # constructor
+        mwenyewe.jina = jina
+        mwenyewe.somo = somo
+    }
+
+    kazi wasilisha() {
+        rudia mwenyewe.jina + " fundisha " + mwenyewe.somo
+    }
+}
+
+mwalimu = tengeneza Mwalimu("Bi Juma", "matematika")
+andika mwalimu.wasilisha()
+andika "Mwalimu somo: " + mwalimu.somo
+andika ainake(mwalimu)            # mwanafunzi
+
+
+# ---------- 12. VITENDOSHI  (modules) ---------------------
+tumia hesabu
+tumia orodha_kazi kama or
+
+andika hesabu.kokotoa(144)                  # 12.0
+andika hesabu.jumla([1, 2, 3, 4])           # 10
+andika hesabu.zidisha(6, 7)                 # 42
+andika or.pangilia([3, 1, 2])               # [1, 2, 3]
+andika or.pangamiza([1, 2, 3], kazi(x) { rudia x * x })   # [1, 4, 9]
+andika or.chomoa([1, 2, 3, 4], kazi(x) { rudia x % 2 == 0 })   # [2, 4]
+
+
+# ---------- 13. NYUMANI  (input) --------------------------
+tumia mfumo
+kama mfumo.stdin_kuna() {
+    jina_lako = ondoa("Jina lako ni nini? ")
+    andika "Habari, " + jina_lako + "!"
+} vingo {
+    andika "(nini maingizo? tumia  python -m swahili -i  kwa mazungumzo)"
+}
+
+
+# ---------- 14. ZA LA KUFANYA  (list powers) --------------
+orodha watu = ["Amani", "Baraka", "Neema"]
+
+andika watu.pangamiza(kazi(x) { rudia x.length })          # [5, 6, 5]
+andika watu.chomoa(kazi(x) { rudia x.length > 5 })          # ['Baraka']
+andika watu.pangilia().pindua()                            # ['Neema', 'Baraka', 'Amani']
+andika watu.hesabia(kazi(a, b) { rudia a + b }, "")        # 'AmaniBarakaNeema'
+andika watu.fanya(2)                                       # list repeated twice
+andika watu.itea()                                        # one random person
+andika watu[0].kiria()                                     # 'amani'
+
+
+# ==========================================================
+#  Mwisho!  Karibu sana kwenye Kiswahili.
+# ==========================================================

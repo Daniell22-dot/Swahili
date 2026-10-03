@@ -1,0 +1,9 @@
+andika "Habari yako, dunia!"
+andika 1 + 2
+namba x = 5
+andika x ** 3
+andika 7 / 2
+andika 7 // 2
+andika kweli na sikweli
+andika "sw" * 3
+andika "a" iko ["a", "b"]
