@@ -183,20 +183,25 @@ andika or.chomoa([1, 2, 3, 4], kazi(x) { rudia x % 2 == 0 })   # [2, 4]
 
 
 # ---------- 13. NYUMANI  (input) --------------------------
-tumia mfumo
-kama mfumo.stdin_kuna() {
+# `ondoa` reads a line from the keyboard. It stops quietly when there is
+# nothing to read (end of input), so this demo never hangs in a pipe.
+jaribu {
     jina_lako = ondoa("Jina lako ni nini? ")
-    andika "Habari, " + jina_lako + "!"
-} vingo {
-    andika "(nini maingizo? tumia  python -m swahili -i  kwa mazungumzo)"
+    kama idadi(jina_lako) > 0 {
+        andika f"Habari, {jina_lako}!"
+    } vingo {
+        andika "(umetoka bila jina — sawa)"
+    }
+} kosa {
+    andika "(hakuna maingizo; fungua programu mwingine kwa mazungumzo)"
 }
 
 
 # ---------- 14. ZA LA KUFANYA  (list powers) --------------
 orodha watu = ["Amani", "Baraka", "Neema"]
 
-andika watu.pangamiza(kazi(x) { rudia x.length })          # [5, 6, 5]
-andika watu.chomoa(kazi(x) { rudia x.length > 5 })          # ['Baraka']
+andika watu.pangamiza(kazi(x) { rudia x.idadi })          # [5, 6, 5]
+andika watu.chomoa(kazi(x) { rudia x.idadi > 5 })          # ['Baraka']
 andika watu.pangilia().pindua()                            # ['Neema', 'Baraka', 'Amani']
 andika watu.hesabia(kazi(a, b) { rudia a + b }, "")        # 'AmaniBarakaNeema'
 andika watu.fanya(2)                                       # list repeated twice
