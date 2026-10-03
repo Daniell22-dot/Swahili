@@ -1,0 +1,10 @@
+# --------------------------------------------------------
+#  Farewell — program that prints a farewell message.
+#  Run: python -m swahili examples/farewell.kisw
+# --------------------------------------------------------
+
+andika "Kwaheri! Tutaonana tena tukuu. Asante sana kwa kuwasiliana na Kiswahili."
+
+# Demo of the `ondoka` builtin (exit program)
+# ondoka 0  "Kwaheri!"
+PYEOF
