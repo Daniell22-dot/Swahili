@@ -21,6 +21,12 @@ from .values import (BoundMethod, Environment, KiswahiliModule,
 
 MAX_DEPTH = 200
 
+DEFAULT_MAX_STEPS = 10_000_000
+DEFAULT_MAX_COLLECTION = 1_000_000
+DEFAULT_MAX_OUTPUT = 10_000_000
+MAX_EXPONENT = 1_000_000
+MAX_BITS = 8_000_000
+
 
 def is_truthy(value: Any) -> bool:
     if value is None or value is False:
@@ -36,7 +42,10 @@ class Interpreter:
     def __init__(self, repl_hook: Callable[[Environment], None] | None = None,
                  search_paths: list[str] | None = None,
                  sandbox: bool = False,
-                 allowed_fs: list[str] | None = None):
+                 allowed_fs: list[str] | None = None,
+                 max_steps: int | None = DEFAULT_MAX_STEPS,
+                 max_collection: int | None = DEFAULT_MAX_COLLECTION,
+                 max_output: int | None = DEFAULT_MAX_OUTPUT):
         self.builtin_env = Environment()
         kitabu.install(self.builtin_env)
         self.globals = Environment(self.builtin_env)
@@ -46,6 +55,11 @@ class Interpreter:
         self.depth = 0
         self.frames: list[tuple[str, str]] = []
         self.sandbox = sandbox
+        self.max_steps = max_steps
+        self.max_collection = max_collection
+        self.max_output = max_output
+        self.steps = 0
+        self.output_chars = 0
         # `None` means "no confinement"; a list (possibly empty) confines the
         # `faili` module to those roots.
         self.allowed_fs = (None if allowed_fs is None
@@ -63,6 +77,9 @@ class Interpreter:
     def run_source(self, source: str, filename: str = "<kisarifi>",
                    env: Environment | None = None) -> None:
         program = parse(source, filename)
+        if not self.frames:
+            self.steps = 0
+            self.output_chars = 0
         self.frames.append((filename, source))
         try:
             self.execute(program, env or self.globals)
@@ -79,6 +96,12 @@ class Interpreter:
     # --- statements --------------------------------------------------------
 
     def execute(self, node: ast.Node, env: Environment) -> None:
+        self.steps += 1
+        if self.max_steps is not None and self.steps > self.max_steps:
+            raise RuntimeErr(
+                f"Mpango umezidi kikomo cha hatua ({self.max_steps})",
+                f"Step budget of {self.max_steps} exceeded",
+                line=getattr(node, "line", 0))
         method = self._DISPATCH.get(type(node))
         if method is None:
             raise RuntimeErr("Serikali haijulikani: " + type(node).__name__,
@@ -298,10 +321,18 @@ class Interpreter:
         stop = self.evaluate(node.stop, env)
         step = self.evaluate(node.step, env) if node.step else 1
         try:
-            return range(int(start), int(stop), int(step))
+            result = range(int(start), int(stop), int(step))
         except (TypeError, ValueError) as exc:
             raise self._oops(node, f"Kipeano siyo sahihi: {exc}",
                              f"Invalid range: {exc}") from None
+        if self.max_collection is not None and len(result) > self.max_collection:
+            raise self._oops(
+                node,
+                f"Kipeano ni kikubwa mno ({len(result)} > "
+                f"{self.max_collection})",
+                f"Range is too large ({len(result)} > "
+                f"{self.max_collection})")
+        return result
 
     def _eval_name(self, node: ast.Name, env) -> Any:
         try:
@@ -384,7 +415,33 @@ class Interpreter:
         right = self.evaluate(node.right, env)
         return self._binary(node, node.op, left, right)
 
+    def _too_large(self, node, size: int, limit: int) -> None:
+        raise self._oops(
+            node,
+            f"Matokeo ni makubwa mno ({size} > {limit})",
+            f"Result is too large ({size} > {limit})")
+
     def _binary(self, node, op: str, left: Any, right: Any) -> Any:
+        limit = self.max_collection
+        if limit is not None and op == "*":
+            if isinstance(left, (str, list)) and _num(right):
+                size = len(left) * max(0, int(right))
+                if size > limit:
+                    self._too_large(node, size, limit)
+            if isinstance(right, (str, list)) and _num(left):
+                size = len(right) * max(0, int(left))
+                if size > limit:
+                    self._too_large(node, size, limit)
+        if op == "**" and isinstance(left, int) and isinstance(right, int) \
+                and not isinstance(left, bool) and not isinstance(right, bool) \
+                and right > 0:
+            bits = max(1, abs(left).bit_length()) * right
+            if right > MAX_EXPONENT or bits > MAX_BITS:
+                raise self._oops(
+                    node,
+                    "Namba inayotokana na ** ni kubwa mno",
+                    f"Result of ** is too large (exponent {right}, "
+                    f"{bits} bits)")
         try:
             return _apply_binary(op, left, right)
         except TypeError as exc:

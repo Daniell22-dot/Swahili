@@ -183,8 +183,10 @@ current default configuration.
 - **Evidence:** `wakati { }` loops have no budget; `wakati.sekunde(s)` sleeps
   arbitrarily; recursion is capped at 200 but loops are not.
 - **Impact:** a program that never terminates pins a core or hangs CI.
-- **Mitigation:** instruction/step budget, wall-clock timeout for file runs,
-  output-size cap, OS resource limits.
+- **Mitigation (implemented):** statement/step budget (`--max-steps`, default
+  10,000,000) and printed-output cap (`--max-output`, default 10,000,000).
+  Remaining: wall-clock timeout for file runs and OS resource limits.
+- **Mitigation (now):** OS-level CPU and time limits.
 
 ### T6 — Memory exhaustion (High)
 
@@ -193,9 +195,11 @@ current default configuration.
   `kipeano(n)` builds `list(range(int(n)))`, list repetition, and large
   literals.
 - **Impact:** OOM kills the process or the machine.
-- **Mitigation:** caps on exponent size, repetition count, range size, and
-  collection length; per-process memory limits; catch `MemoryError` and
-  report cleanly.
+- **Mitigation (implemented):** range size, string/list repetition, `kipeano`,
+  and exponent magnitude/bits are capped (`--max-collection`, default
+  1,000,000; exponent ≤ 1,000,000 and result ≤ 8,000,000 bits). Remaining:
+  per-process memory limits and catching `MemoryError` cleanly.
+- **Mitigation (now):** run under an OS memory limit.
 
 ### T7 — Parser/lexer stack exhaustion (Medium)
 
@@ -321,8 +325,8 @@ source line containing a secret parsed from the environment. → T8, T2.
 | Capability/allow-list for filesystem | **partial** (`--allow-fs DIR`, realpath confinement) |
 | Capability/allow-list for environment | **absent** |
 | Module resolution hardening | **present** (built-ins first; CWD not searched; explicit `--path`) |
-| Execution time / step budget | **absent** |
-| Memory / size limits | **absent** |
+| Execution time / step budget | **present** (statement budget `--max-steps`, default 10,000,000; output cap `--max-output`, default 10,000,000; wall-clock timeout pending) |
+| Memory / size limits | **present** (collection/repetition/range/exponent size caps `--max-collection`, default 1,000,000; exponent bounds default; wall-clock timeout pending) |
 | Parser nesting limit | **absent** |
 | Recursion limit (language) | present (200) |
 | No Python `eval`/`exec` of program text | **present** (good) |

@@ -157,8 +157,10 @@ Even without a code sandbox, you can limit exposure:
 
 - No environment allow-list (`mfumo` is blocked wholesale with `--sandbox`;
   per-variable grants are not implemented).
-- No execution timeout or step budget.
-- No memory or output limits.
+- No wall-clock timeout (the step budget bounds CPU work but not
+  `wakati.sekunde` sleeps).
+- No memory (RSS) limit; collection/repetition/range/exponent sizes and printed
+  output are capped via `--max-collection` and `--max-output`.
 - No signature or provenance check for local modules (built-ins now win over
   local files and the current directory is no longer searched, which closes
   the shadowing path).

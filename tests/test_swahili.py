@@ -579,6 +579,38 @@ class SandboxTests(unittest.TestCase):
             self.assertEqual(code, 0)
 
 
+class BudgetTests(unittest.TestCase):
+    def test_step_budget_stops_infinite_loop(self):
+        with self.assertRaises(KiswahiliError):
+            Interpreter(max_steps=5000).run_source("wakati kweli { x = 1 }")
+
+    def test_range_budget(self):
+        with self.assertRaises(KiswahiliError):
+            Interpreter(max_collection=100).run_source("andika 1..1000")
+
+    def test_repetition_budget(self):
+        with self.assertRaises(KiswahiliError):
+            Interpreter(max_collection=100).run_source('andika "a" * 1000')
+
+    def test_kipeano_budget(self):
+        with self.assertRaises(KiswahiliError):
+            Interpreter(max_collection=100).run_source("andika kipeano(0, 1000)")
+
+    def test_exponent_budget(self):
+        with self.assertRaises(KiswahiliError):
+            Interpreter().run_source("andika 2 ** 2000000")
+
+    def test_output_budget(self):
+        with self.assertRaises(KiswahiliError):
+            Interpreter(max_output=5).run_source('andika "abcdefghij"')
+
+    def test_budgets_reset_between_runs(self):
+        interp = Interpreter(max_steps=100)
+        with redirect_stdout(io.StringIO()):
+            interp.run_source("andika 1")
+            interp.run_source("andika 2")
+
+
 class ParserTests(unittest.TestCase):
     def test_statements(self):
         program = parse("andika 1\nkaza = 2\n", "t.kisw")

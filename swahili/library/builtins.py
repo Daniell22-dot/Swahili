@@ -17,7 +17,7 @@ import random as _random
 import sys
 from typing import Any, Callable
 
-from ..errors import TupaImbali
+from ..errors import RuntimeErr, TupaImbali
 from ..runtime import (BoundMethod, KiswahiliModule, NativeFunction,
                       SwahiliClass, SwahiliFunction, SwahiliInstance,
                       display, iterate, type_name)
@@ -44,8 +44,16 @@ def _callable(value: Any):
 
 # --- global functions -------------------------------------------------------
 
-def _andika(*values: Any) -> None:
-    sys.stdout.write(" ".join(display(v) for v in values) + "\n")
+def _andika(interp, *values: Any) -> None:
+    text = " ".join(display(v) for v in values) + "\n"
+    limit = getattr(interp, "max_output", None)
+    if limit is not None:
+        interp.output_chars += len(text)
+        if interp.output_chars > limit:
+            raise RuntimeErr(
+                f"Kikomo cha matokeo kimezidi ({limit})",
+                f"Output budget of {limit} characters exceeded")
+    sys.stdout.write(text)
     sys.stdout.flush()
 
 
@@ -127,8 +135,14 @@ def _kamusi(value: Any) -> dict:
     raise TypeError(f"hawezi kubadilisha {type_name(value)} kuwa kamusi")
 
 
-def _kipeano(start: int, stop: int, step: int = 1) -> range:
-    return range(start, stop, step)
+def _kipeano(interp, start: int, stop: int, step: int = 1) -> range:
+    result = range(start, stop, step)
+    limit = getattr(interp, "max_collection", None)
+    if limit is not None and len(result) > limit:
+        raise RuntimeErr(
+            f"Kipeano ni kikubwa mno ({len(result)} > {limit})",
+            f"Range is too large ({len(result)} > {limit})")
+    return result
 
 
 def _ondoka(code: int = 0, ujumbe: str = "") -> None:
@@ -309,7 +323,7 @@ def _suggest(name: str, table: dict) -> str:
 
 def install(env) -> None:
     """Define every built-in into `env` (the global scope)."""
-    env.define("andika", NativeFunction("andika", _andika))
+    env.define("andika", NativeFunction("andika", _andika, needs_interp=True))
     env.define("ondoa", NativeFunction("ondoa", _ondoa))
     env.define("idadi", NativeFunction("idadi", _idadi))
     env.define("ainake", NativeFunction("ainake", _ainake))
@@ -319,7 +333,7 @@ def install(env) -> None:
     env.define("hali", NativeFunction("hali", _hali))
     env.define("orodha", NativeFunction("orodha", _orodha))
     env.define("kamusi", NativeFunction("kamusi", _kamusi))
-    env.define("kipeano", NativeFunction("kipeano", _kipeano))
+    env.define("kipeano", NativeFunction("kipeano", _kipeano, needs_interp=True))
     env.define("ondoka", NativeFunction("ondoka", _ondoka))
 
     env.define("pangilia", NativeFunction("pangilia", _pangilia, needs_interp=True))

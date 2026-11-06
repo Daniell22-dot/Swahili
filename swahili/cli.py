@@ -62,6 +62,12 @@ def main(argv: list[str] | None = None) -> int:
                              "combine with --sandbox to allow only DIR)")
     parser.add_argument("--path", action="append", metavar="DIR", default=[],
                         help="add a directory to the module search path")
+    parser.add_argument("--max-steps", type=int, default=None, metavar="N",
+                        help="abort after N executed nodes")
+    parser.add_argument("--max-collection", type=int, default=None, metavar="N",
+                        help="cap range/repetition size at N elements")
+    parser.add_argument("--max-output", type=int, default=None, metavar="N",
+                        help="cap printed output at N characters")
     parser.add_argument("-h", "--help", action="help", help=__doc__)
     args = parser.parse_args(argv)
 
@@ -70,8 +76,17 @@ def main(argv: list[str] | None = None) -> int:
         search_paths.append(os.path.dirname(os.path.abspath(args.faili)))
     search_paths.extend(args.path)
 
+    limits = {}
+    if args.max_steps is not None:
+        limits["max_steps"] = args.max_steps
+    if args.max_collection is not None:
+        limits["max_collection"] = args.max_collection
+    if args.max_output is not None:
+        limits["max_output"] = args.max_output
+
     interpreter = Interpreter(repl_hook=None, search_paths=search_paths,
-                              sandbox=args.sandbox, allowed_fs=args.allow_fs)
+                              sandbox=args.sandbox, allowed_fs=args.allow_fs,
+                              **limits)
     interpreter.repl_hook = lambda env: repl_loop(interpreter, env, quiet=True)
 
     try:

@@ -255,6 +255,9 @@ Capability flags for untrusted code:
 | `--sandbox` | refuse `faili` and `mfumo` |
 | `--allow-fs DIR` | allow `faili` only inside `DIR` (repeatable); with `--sandbox`, `mfumo` stays blocked |
 | `--path DIR` | add `DIR` to the module search path |
+| `--max-steps N` | abort after `N` executed nodes (default 10,000,000) |
+| `--max-collection N` | cap ranges/repetition at `N` elements (default 1,000,000) |
+| `--max-output N` | cap printed output at `N` characters (default 10,000,000) |
 
 ### Standard library
 
