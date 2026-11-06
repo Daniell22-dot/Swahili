@@ -82,29 +82,27 @@ Assumptions:
 
 ## 5. Trust boundaries and data flow
 
-```
-        untrusted .kisw source
-                |
-                v
-   +--------------------------+        +-------------------+
-   | frontend/                |        | library/          |
-   |  lexer -> parser -> AST  |        |  builtins         |
-   +--------------------------+        |  modules (faili,  |
-                |                     |  mfumo, wakati,   |
-                v                     |  kansa, ...)      |
-   +--------------------------+        +-------------------+
-   | runtime/interpreter      |  calls          |
-   |  evaluates the AST       |-----------------+
-   +--------------------------+                 |
-                |                               v
-                |                    +------------------------+
-                |                    | HOST OS (Python)       |
-                |                    | files, env, clock,     |
-                |                    | stdout/stderr, exit,   |
-                |                    | CPU, memory, randomness|
-                |                    +------------------------+
-                v
-         diagnostics (stderr)
+```mermaid
+flowchart TD
+    src["untrusted .kisw source"]
+    fe["frontend<br/>lexer → parser → AST"]
+    rt["runtime/interpreter<br/>evaluate AST"]
+    files[("module files on disk<br/>NAME.kisw · moduli/")]
+    lib["library<br/>builtins + modules<br/>faili · mfumo · wakati · kansa"]
+    host["HOST OS (Python)<br/>files · environment · clock<br/>stdout/stderr · exit<br/>CPU · memory · randomness"]
+    diag["diagnostics (stderr)"]
+
+    src -->|"boundary 1"| fe
+    fe --> rt
+    rt -->|"tumia — boundary 3"| files
+    rt -->|"calls"| lib
+    lib -->|"boundary 2"| host
+    rt -->|"boundary 5"| diag
+
+    classDef untrusted fill:#fff3cd,stroke:#b8860b,stroke-width:2px;
+    classDef hostZone fill:#ffe0e0,stroke:#c00,stroke-width:2px;
+    class src untrusted;
+    class host hostZone;
 ```
 
 Boundaries:
@@ -117,6 +115,9 @@ Boundaries:
 4. **Distribution → build/install.** Installing the package executes a build
    backend.
 5. **Diagnostics → logs.** Errors may carry source lines and paths.
+
+Boundary 4 (distribution → build/install) happens before this runtime flow; it
+is covered by T13 and T14.
 
 ## 6. Threat catalog (STRIDE)
 

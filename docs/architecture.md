@@ -3,21 +3,38 @@
 Kiswahili is a classic tree-walking interpreter. Source text flows through
 four stages, and the package is organised to match them.
 
-```
-.kisw text
-   |
-   v
-frontend/lexer.py     tokenize ──────────────► tokens
-   |
-   v
-frontend/parser.py    Pratt parse ───────────► AST (frontend/ast.py)
-   |
-   v
-runtime/interpreter.py evaluate ─────────────► values (runtime/values.py)
-   |                               |
-   |                               └─ library/builtins.py, library/modules.py
-   v
-stdout / diagnostics (errors.py, cli.py)
+```mermaid
+flowchart TD
+    src[".kisw source text"]
+
+    subgraph frontend["frontend/ — source to tree"]
+        lex["lexer.py<br/>tokenize"]
+        tok["tokens"]
+        par["parser.py<br/>Pratt parse"]
+        ast["ast.py<br/>AST nodes"]
+        lex --> tok --> par --> ast
+    end
+
+    subgraph runtime["runtime/ — evaluate the tree"]
+        interp["interpreter.py<br/>evaluate / execute"]
+        vals["values.py<br/>Environment, values, classes"]
+    end
+
+    subgraph library["library/ — standard library"]
+        bi["builtins.py<br/>andika, idadi, ..."]
+        mods["modules.py<br/>hesabu, faili, mfumo, ..."]
+    end
+
+    out["stdout / diagnostics<br/>cli.py, errors.py"]
+
+    src --> lex
+    ast --> interp
+    interp --> vals
+    interp --> bi
+    interp --> mods
+    bi --> vals
+    mods --> vals
+    interp --> out
 ```
 
 ## Folder map
@@ -46,13 +63,19 @@ stdout / diagnostics (errors.py, cli.py)
 
 Dependencies point **inward and downward**:
 
+```mermaid
+flowchart LR
+    cli["cli.py"] --> runtime["runtime/"]
+    runtime --> frontend["frontend/"]
+    runtime --> errors["errors.py"]
+    runtime --> library["library/"]
+    library --> values["runtime/values.py"]
+    frontend --> errors
 ```
-cli ──► runtime ──► frontend
-          │  │
-          │  └──► errors
-          └─────► library ──► runtime (values only)
-frontend ──► errors
-```
+
+`runtime/interpreter.py` imports `library/`, and `library/` imports
+`runtime/values.py`. The only shared link is `values.py`, so there is no
+import cycle at module level.
 
 Rules of thumb:
 
