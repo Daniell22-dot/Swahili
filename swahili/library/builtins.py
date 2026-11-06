@@ -17,8 +17,8 @@ import random as _random
 import sys
 from typing import Any, Callable
 
-from .errors import TupaImbali
-from .runtime import (BoundMethod, KiswahiliModule, NativeFunction,
+from ..errors import TupaImbali
+from ..runtime import (BoundMethod, KiswahiliModule, NativeFunction,
                       SwahiliClass, SwahiliFunction, SwahiliInstance,
                       display, iterate, type_name)
 

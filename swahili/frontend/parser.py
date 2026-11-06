@@ -13,7 +13,7 @@ Precedence, loosest to tightest:
 from __future__ import annotations
 
 from . import ast
-from .errors import Kosa
+from ..errors import Kosa
 from .lexer import OP_PRECEDENCE, TYPE_TOKENS, Token, tokenize
 
 ASSIGN_OPS = {
@@ -679,7 +679,7 @@ class Parser:
 
     def _fstring_parts(self, token: Token) -> list:
         from .lexer import Lexer
-        from .errors import Kosa as _Kosa
+        from ..errors import Kosa as _Kosa
         parts: list = []
         for piece in token.value:
             if isinstance(piece, str):

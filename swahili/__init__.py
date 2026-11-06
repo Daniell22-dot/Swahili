@@ -6,9 +6,8 @@
 """
 
 from .errors import KiswahiliError, Kosa, LexError, ParseError, RuntimeErr
-from .interpreter import Interpreter
-from .lexer import tokenize
-from .parser import parse
+from .runtime import Interpreter
+from .frontend import tokenize, parse
 
 __version__ = "0.1.0"
 __all__ = [

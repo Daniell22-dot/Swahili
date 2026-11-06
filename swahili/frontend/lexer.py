@@ -12,7 +12,7 @@ Also supported, because they make the language nicer to actually use:
 
 from __future__ import annotations
 
-from .errors import Kosa
+from ..errors import Kosa
 
 # --- word lists -------------------------------------------------------------
 

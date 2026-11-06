@@ -4,13 +4,11 @@ import io
 import os
 import sys
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from swahili import Interpreter, KiswahiliError            # noqa: E402
-from swahili.lexer import tokenize                          # noqa: E402
-from swahili.parser import parse                            # noqa: E402
+from swahili import Interpreter, KiswahiliError, tokenize, parse   # noqa: E402
 
 
 def run(source: str) -> str:
@@ -444,6 +442,37 @@ class ModuleTests(unittest.TestCase):
     def test_unknown_module_member(self):
         with self.assertRaises(KiswahiliError):
             run("tumia hesabu\nandika hesabu.haipo")
+
+
+class SandboxTests(unittest.TestCase):
+    def _sandboxed(self):
+        return Interpreter(sandbox=True)
+
+    def test_blocks_filesystem_module(self):
+        with self.assertRaises(KiswahiliError):
+            self._sandboxed().run_source("tumia faili")
+
+    def test_blocks_system_module(self):
+        with self.assertRaises(KiswahiliError):
+            self._sandboxed().run_source("tumia mfumo")
+
+    def test_allows_safe_modules(self):
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            self._sandboxed().run_source("tumia hesabu\nandika hesabu.zidisha(2, 3)")
+        self.assertEqual(buffer.getvalue().strip(), "6")
+
+    def test_sandbox_off_allows_import(self):
+        interp = Interpreter()
+        interp.run_source("tumia faili")
+
+    def test_cli_sandbox_flag(self):
+        from swahili.cli import main
+        buffer = io.StringIO()
+        with redirect_stderr(buffer):
+            code = main(["--sandbox", "-c", "tumia faili"])
+        self.assertEqual(code, 1)
+        self.assertIn("sandbox", buffer.getvalue())
 
 
 class ParserTests(unittest.TestCase):

@@ -29,5 +29,5 @@ Homepage = "https://github.com/Daniell22-dot/Swahili"
 [project.scripts]
 swahili = "swahili.cli:main"
 
-[tool.setuptools]
-packages = ["swahili"]
+[tool.setuptools.packages.find]
+include = ["swahili*"]

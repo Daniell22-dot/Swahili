@@ -10,13 +10,14 @@ from __future__ import annotations
 import os
 from typing import Any, Callable
 
-from . import ast, builtins as kitabu
-from .errors import (Endelea, KiswahiliError, Kosa, Rudeia, RuntimeErr,
-                     TupaImbali, Vunja)
-from .parser import parse
-from .runtime import (BoundMethod, Environment, KiswahiliModule,
-                      NativeFunction, SwahiliClass, SwahiliFunction,
-                      SwahiliInstance, display, iterate, type_name)
+from ..frontend import ast
+from ..library import builtins as kitabu
+from ..errors import (Endelea, KiswahiliError, Kosa, Rudeia, RuntimeErr,
+                      TupaImbali, Vunja)
+from ..frontend.parser import parse
+from .values import (BoundMethod, Environment, KiswahiliModule,
+                     NativeFunction, SwahiliClass, SwahiliFunction,
+                     SwahiliInstance, display, iterate, type_name)
 
 MAX_DEPTH = 200
 
@@ -33,7 +34,8 @@ def is_truthy(value: Any) -> bool:
 
 class Interpreter:
     def __init__(self, repl_hook: Callable[[Environment], None] | None = None,
-                 search_paths: list[str] | None = None):
+                 search_paths: list[str] | None = None,
+                 sandbox: bool = False):
         self.builtin_env = Environment()
         kitabu.install(self.builtin_env)
         self.globals = Environment(self.builtin_env)
@@ -42,6 +44,9 @@ class Interpreter:
         self.modules: dict[str, KiswahiliModule] = {}
         self.depth = 0
         self.frames: list[tuple[str, str]] = []
+        self.sandbox = sandbox
+        # Modules that reach the host directly are refused in sandbox mode.
+        self.denied_modules: set[str] = {"faili", "mfumo"} if sandbox else set()
 
     # --- public entry points ----------------------------------------------
 
@@ -596,6 +601,14 @@ class Interpreter:
         if name in self.modules:
             return self.modules[name]
 
+        if name in self.denied_modules:
+            raise self._oops(
+                node,
+                f"Moduli '{name}' imezuiwa katika hali ya sandbox",
+                f"Module '{name}' is blocked in sandbox mode",
+                "Ondoa `--sandbox` ikiwa unaamini programu hii. / "
+                "Remove `--sandbox` if you trust this program.")
+
         spec = f"{name}.kisw"
         path = self._find_file(spec)
         if path is not None:
@@ -744,7 +757,7 @@ def _closest(name: str, options: list[str]) -> str:
 
 
 def _load_builtin_module(interp: "Interpreter", name: str) -> KiswahiliModule | None:
-    from . import stdlib
+    from ..library import modules as stdlib
     factory = stdlib.MODULES.get(name)
     if factory is None:
         return None

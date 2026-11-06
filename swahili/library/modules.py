@@ -23,7 +23,7 @@ import time as _time
 from datetime import datetime as _datetime
 
 from .builtins import _pangamiza, _chomoa, _pinganya
-from .runtime import NativeFunction
+from ..runtime import NativeFunction
 
 
 def _jumla(*values: object) -> float | int:

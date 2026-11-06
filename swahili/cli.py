@@ -13,8 +13,7 @@ import os
 import sys
 
 from .errors import KiswahiliError, Kosa, TupaImbali
-from .interpreter import Interpreter
-from .runtime import Environment, display
+from .runtime import Environment, Interpreter, display
 
 VERSION = "0.1.0"
 EXTENSION = ".kisw"
@@ -56,6 +55,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="start the interactive REPL")
     parser.add_argument("-v", "--version", action="version",
                         version=f"swahili {VERSION}")
+    parser.add_argument("--sandbox", action="store_true",
+                        help="block host-access modules (faili, mfumo)")
     parser.add_argument("-h", "--help", action="help", help=__doc__)
     args = parser.parse_args(argv)
 
@@ -63,7 +64,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.faili:
         search_paths.append(os.path.dirname(os.path.abspath(args.faili)))
 
-    interpreter = Interpreter(repl_hook=None, search_paths=search_paths)
+    interpreter = Interpreter(repl_hook=None, search_paths=search_paths,
+                              sandbox=args.sandbox)
     interpreter.repl_hook = lambda env: repl_loop(interpreter, env, quiet=True)
 
     try:

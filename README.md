@@ -121,18 +121,22 @@ Load a module with `tumia <jina>`:
 
 ```
 swahili/            the interpreter package
-  lexer.py          source text -> tokens
-  parser.py         tokens -> AST (Pratt parser)
-  ast.py            AST node definitions
-  interpreter.py    tree-walking evaluator
-  runtime.py        values, environments, classes
-  builtins.py       global built-ins and value methods
-  stdlib.py         importable modules
+  frontend/         source code -> syntax tree
+    lexer.py        source text -> tokens
+    parser.py       tokens -> AST (Pratt parser)
+    ast.py          AST node definitions
+  runtime/          evaluating the tree
+    values.py       values, environments, classes
+    interpreter.py  tree-walking evaluator
+  library/          the standard library
+    builtins.py     global built-ins and value methods
+    modules.py      importable modules (`tumia`)
   errors.py         bilingual error types and reporting
   cli.py            command-line entry point / REPL
 examples/           sample .kisw programs
 tests/              unittest suite
-docs/               language reference and tutorial
+docs/               language reference, tutorial, security notes
+SECURITY.md         security policy and threat model summary
 ```
 
 ## Development
@@ -143,6 +147,15 @@ Run the test suite:
 $env:PYTHONPATH="."
 python -m unittest discover -s tests
 ```
+
+## Documentation
+
+- [`docs/tutorial.md`](docs/tutorial.md) — step-by-step introduction
+- [`docs/spec.md`](docs/spec.md) — language reference
+- [`docs/architecture.md`](docs/architecture.md) — how the interpreter is built
+- [`docs/security/threat-model.md`](docs/security/threat-model.md) — threats and hardening
+- [`docs/security/sandbox.md`](docs/security/sandbox.md) — running untrusted code
+- [`SECURITY.md`](SECURITY.md) — security policy
 
 ## Status
 
