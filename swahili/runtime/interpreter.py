@@ -35,7 +35,8 @@ def is_truthy(value: Any) -> bool:
 class Interpreter:
     def __init__(self, repl_hook: Callable[[Environment], None] | None = None,
                  search_paths: list[str] | None = None,
-                 sandbox: bool = False):
+                 sandbox: bool = False,
+                 allowed_fs: list[str] | None = None):
         self.builtin_env = Environment()
         kitabu.install(self.builtin_env)
         self.globals = Environment(self.builtin_env)
@@ -45,8 +46,17 @@ class Interpreter:
         self.depth = 0
         self.frames: list[tuple[str, str]] = []
         self.sandbox = sandbox
+        # `None` means "no confinement"; a list (possibly empty) confines the
+        # `faili` module to those roots.
+        self.allowed_fs = (None if allowed_fs is None
+                           else [os.path.abspath(p) for p in allowed_fs])
         # Modules that reach the host directly are refused in sandbox mode.
-        self.denied_modules: set[str] = {"faili", "mfumo"} if sandbox else set()
+        denied: set[str] = set()
+        if sandbox:
+            denied.add("mfumo")
+            if self.allowed_fs is None:
+                denied.add("faili")
+        self.denied_modules = denied
 
     # --- public entry points ----------------------------------------------
 
@@ -609,6 +619,14 @@ class Interpreter:
                 "Ondoa `--sandbox` ikiwa unaamini programu hii. / "
                 "Remove `--sandbox` if you trust this program.")
 
+        # Built-in modules win over local files so that a stray or hostile
+        # `NAME.kisw` cannot shadow a trusted standard module. Local modules
+        # are only considered for names that are not built in.
+        builtin = _load_builtin_module(self, name)
+        if builtin is not None:
+            self.modules[name] = builtin
+            return builtin
+
         spec = f"{name}.kisw"
         path = self._find_file(spec)
         if path is not None:
@@ -619,11 +637,6 @@ class Interpreter:
             module = KiswahiliModule(name, dict(module_env.vars))
             self.modules[name] = module
             return module
-
-        builtin = _load_builtin_module(self, name)
-        if builtin is not None:
-            self.modules[name] = builtin
-            return builtin
 
         raise self._oops(
             node,
@@ -636,7 +649,10 @@ class Interpreter:
         self._exec_program(program, env)
 
     def _find_file(self, filename: str) -> str | None:
-        folders: list[str] = [*self.search_paths, os.getcwd()]
+        # Only explicit search paths are consulted. The current working
+        # directory is deliberately NOT searched: it is often attacker
+        # controlled (for example, an extracted archive).
+        folders: list[str] = list(self.search_paths)
         candidates = [os.path.join(folder, filename) for folder in folders]
         candidates += [os.path.join(folder, "moduli", filename) for folder in folders]
         for candidate in candidates:

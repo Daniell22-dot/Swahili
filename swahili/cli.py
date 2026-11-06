@@ -57,15 +57,21 @@ def main(argv: list[str] | None = None) -> int:
                         version=f"swahili {VERSION}")
     parser.add_argument("--sandbox", action="store_true",
                         help="block host-access modules (faili, mfumo)")
+    parser.add_argument("--allow-fs", action="append", metavar="DIR",
+                        help="confine `faili` to DIR (repeatable; "
+                             "combine with --sandbox to allow only DIR)")
+    parser.add_argument("--path", action="append", metavar="DIR", default=[],
+                        help="add a directory to the module search path")
     parser.add_argument("-h", "--help", action="help", help=__doc__)
     args = parser.parse_args(argv)
 
     search_paths: list[str] = []
     if args.faili:
         search_paths.append(os.path.dirname(os.path.abspath(args.faili)))
+    search_paths.extend(args.path)
 
     interpreter = Interpreter(repl_hook=None, search_paths=search_paths,
-                              sandbox=args.sandbox)
+                              sandbox=args.sandbox, allowed_fs=args.allow_fs)
     interpreter.repl_hook = lambda env: repl_loop(interpreter, env, quiet=True)
 
     try:

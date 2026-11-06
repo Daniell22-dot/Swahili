@@ -112,10 +112,16 @@ Load a module with `tumia <jina>`:
 | `hesabu` | maths (sqrt, round, sum, trig, logs, constants) |
 | `orodha_kazi` | extra list tools (sort, map, filter, shuffle) |
 | `maneno_kazi` | extra string tools |
-| `kansa` | randomness |
+| `kansa` | randomness (not cryptographically secure) |
+| `siri` | cryptographic randomness (`secrets`) |
 | `wakati` | time and dates |
 | `mfumo` | system and environment |
 | `faili` | file reading and writing |
+
+Built-in modules always win over local files, and only the program's own
+directory plus any `--path DIR` entries are searched (never the current
+working directory). Run untrusted code with `--sandbox`; add `--allow-fs DIR`
+to permit `faili` inside a specific directory while `mfumo` stays blocked.
 
 ## Project layout
 

@@ -20,6 +20,19 @@ It refuses to load the host-access modules `faili` (filesystem) and `mfumo`
 isolation**: it does not stop resource exhaustion, and it does not replace an
 OS sandbox. Pair it with the controls below.
 
+To allow filesystem access inside one directory while keeping the rest of the
+sandbox:
+
+```powershell
+python -m swahili --sandbox --allow-fs ./data program.kisw
+```
+
+`--allow-fs` is repeatable and resolves `..` and symlinks before checking, so
+paths cannot escape the granted roots. With this flag `faili` is available,
+but `mfumo` remains blocked. Note that module resolution only searches the
+program's directory and explicit `--path DIR` entries; the current working
+directory is never searched implicitly.
+
 ## General checklist
 
 - [ ] Create/use a separate unprivileged account.
@@ -132,20 +145,23 @@ Even without a code sandbox, you can limit exposure:
   env -i PATH="$PATH" HOME=/tmp python -m swahili program.kisw
   ```
 
-- Run in an empty working directory so module resolution cannot pick up local
-  files by accident.
+- Run in an empty working directory. The current working directory is not on
+  the module search path, but relative paths passed to `faili` still resolve
+  against it.
 - Remember that `mfumo.mazingira` can read any variable you leave in the
   environment.
-- Remember that `faili` can read and write any path the user can reach.
+- Remember that `faili` can read and write any path the user can reach unless
+  you pass `--allow-fs`.
 
 ## What the interpreter does not do (yet)
 
-- No filesystem capability allow-list (the `--sandbox` flag blocks `faili`
-  entirely, but cannot grant a single directory).
-- No environment allow-list (blocked wholesale with `--sandbox`).
+- No environment allow-list (`mfumo` is blocked wholesale with `--sandbox`;
+  per-variable grants are not implemented).
 - No execution timeout or step budget.
 - No memory or output limits.
-- No module provenance check; a local `NAME.kisw` can shadow a built-in.
+- No signature or provenance check for local modules (built-ins now win over
+  local files and the current directory is no longer searched, which closes
+  the shadowing path).
 
 Until those exist, the operating-system controls above are the security
 boundary. See [`threat-model.md`](threat-model.md) for the hardening roadmap.

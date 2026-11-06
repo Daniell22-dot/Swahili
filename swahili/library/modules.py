@@ -18,11 +18,13 @@ from __future__ import annotations
 import math
 import os
 import random as _random
+import secrets as _secrets
 import sys
 import time as _time
 from datetime import datetime as _datetime
 
 from .builtins import _pangamiza, _chomoa, _pinganya
+from ..errors import RuntimeErr
 from ..runtime import NativeFunction
 
 
@@ -107,6 +109,45 @@ def _kansa(interp) -> dict:
     }
 
 
+def _siri(interp) -> dict:
+    def _tokeni(n=32):
+        n = int(n)
+        if n < 0:
+            raise RuntimeErr("siri.tokeni inahitaji n >= 0",
+                             "siri.tokeni requires n >= 0")
+        return _secrets.token_hex(n)
+
+    def _baiti(n=16):
+        n = int(n)
+        if n < 0:
+            raise RuntimeErr("siri.baiti inahitaji n >= 0",
+                             "siri.baiti requires n >= 0")
+        return list(_secrets.token_bytes(n))
+
+    def _namba(a, b):
+        a, b = int(a), int(b)
+        if b <= a:
+            raise RuntimeErr(
+                "siri.namba inahitaji b > a",
+                "siri.namba requires b > a")
+        return a + _secrets.randbelow(b - a)
+
+    def _chagua(xs):
+        items = list(xs)
+        if not items:
+            raise RuntimeErr("siri.chagua inahitaji orodha isiyo tupu",
+                             "siri.chagua requires a non-empty list")
+        return _secrets.choice(items)
+
+    return {
+        "tokeni": NativeFunction("tokeni", _tokeni),
+        "baiti": NativeFunction("baiti", _baiti),
+        "namba": NativeFunction("namba", _namba),
+        "chagua": NativeFunction("chagua", _chagua),
+        "linganisha": NativeFunction("linganisha", _secrets.compare_digest),
+    }
+
+
 def _wakati(interp) -> dict:
     return {
         "sasa": NativeFunction("sasa", lambda: _time.time()),
@@ -140,29 +181,44 @@ def _mfumo(interp) -> dict:
     }
 
 
-def _faili(reader) -> dict:
+def _faili(interp) -> dict:
+    roots = getattr(interp, "allowed_fs", None)
+
+    def _guard(path):
+        """Confine access to the allowed roots, resolving symlinks/`..`."""
+        if roots is None:
+            return path
+        target = os.path.normcase(os.path.realpath(str(path)))
+        for root in roots:
+            base = os.path.normcase(os.path.realpath(root))
+            if target == base or target.startswith(base + os.sep):
+                return path
+        raise RuntimeErr(
+            "Huwezi kufikia faili hii: iko nje ya folda zilizoruhusiwa",
+            "Cannot access this file: it is outside the allowed folders")
+
     def _soma(jina, encoding="utf-8"):
-        with open(jina, "r", encoding=encoding) as handle:
+        with open(_guard(jina), "r", encoding=encoding) as handle:
             return handle.read()
 
     def _andika(jina, maudhui, append=False):
-        with open(jina, "a" if append else "w", encoding="utf-8") as handle:
+        with open(_guard(jina), "a" if append else "w", encoding="utf-8") as handle:
             handle.write(maudhui)
         return len(maudhui)
 
     def _mistari(jina, encoding="utf-8"):
-        with open(jina, "r", encoding=encoding) as handle:
+        with open(_guard(jina), "r", encoding=encoding) as handle:
             return handle.read().splitlines()
 
     def _ipo(jina):
-        return os.path.isfile(jina)
+        return os.path.isfile(_guard(jina))
 
     def _futa(jina):
-        os.remove(jina)
+        os.remove(_guard(jina))
         return True
 
     def _tengeneza(jina):
-        open(jina, "a", encoding="utf-8").close()
+        open(_guard(jina), "a", encoding="utf-8").close()
         return jina
 
     return {
@@ -180,6 +236,7 @@ MODULES = {
     "orodha_kazi": _orodha_kazi,
     "maneno_kazi": _maneno_kazi,
     "kansa": _kansa,
+    "siri": _siri,
     "wakati": _wakati,
     "mfumo": _mfumo,
     "faili": _faili,

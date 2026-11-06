@@ -36,7 +36,7 @@ In scope:
 - the lexer, parser, and tree-walking interpreter;
 - the global built-ins and value methods (`andika`, `ondoa`, `pangamiza`, …);
 - the standard-library modules (`hesabu`, `orodha_kazi`, `maneno_kazi`,
-  `kansa`, `wakati`, `mfumo`, `faili`);
+  `kansa`, `siri`, `wakati`, `mfumo`, `faili`);
 - module resolution (`tumia`);
 - the CLI and REPL;
 - packaging and distribution (`pyproject.toml`).
@@ -88,7 +88,7 @@ flowchart TD
     fe["frontend<br/>lexer → parser → AST"]
     rt["runtime/interpreter<br/>evaluate AST"]
     files[("module files on disk<br/>NAME.kisw · moduli/")]
-    lib["library<br/>builtins + modules<br/>faili · mfumo · wakati · kansa"]
+    lib["library<br/>builtins + modules<br/>faili · mfumo · wakati · kansa · siri"]
     host["HOST OS (Python)<br/>files · environment · clock<br/>stdout/stderr · exit<br/>CPU · memory · randomness"]
     diag["diagnostics (stderr)"]
 
@@ -135,6 +135,10 @@ current default configuration.
   (`--allow-fs=DIR`), path confinement (resolve and verify under allowed
   roots), default deny when running untrusted programs. The current
   `--sandbox` flag already refuses the `faili` module outright.
+- **Mitigation (implemented):** `--allow-fs DIR` (repeatable) grants `faili`
+  only inside the given roots; every path is passed through
+  `os.path.realpath` and checked before `open`/`os.remove`, which also blocks
+  `..` and symlink escapes. Without `--allow-fs`, `--sandbox` denies `faili`.
 - **Mitigation (now):** run untrusted programs as a low-privileged user in a
   container or OS sandbox.
 
@@ -156,19 +160,22 @@ current default configuration.
   un-sandboxed. Provide a documented sandbox runner (container, Windows
   AppContainer / low-integrity token, macOS sandbox profile, `firejail`).
 
-### T4 — Module shadowing / search-path hijack (High)
+### T4 — Module shadowing / search-path hijack (High) — mitigated
 
 - **Boundary:** module resolution → filesystem.
-- **Evidence:** `runtime/interpreter.py` `load_module` checks for a local
-  `<name>.kisw` *before* the built-in module, and `_find_file` searches
-  `self.search_paths`, then **`os.getcwd()`**, then `moduli/` subfolders.
+- **Evidence (historical):** `runtime/interpreter.py` `load_module` checked
+  for a local `<name>.kisw` *before* the built-in module, and `_find_file`
+  searched `self.search_paths`, then **`os.getcwd()`**, then `moduli/`
+  subfolders.
 - **Impact:** a file named `hesabu.kisw` placed in the working directory or in
   a writable module folder replaces the trusted standard module. A malicious
   CWD (e.g., an extracted archive) silently hijacks imports.
-- **Mitigation:** resolve built-in modules first (or require an explicit
-  override), remove CWD from the default search path, restrict to the script
-  directory and an explicit `--path`, and emit a warning when a local file
-  shadows a built-in name.
+- **Mitigation (implemented):** `load_module` now resolves built-ins first;
+  `_find_file` searches only the program directory and explicit `--path`
+  entries (no CWD). A local file can no longer shadow a standard module, and
+  local modules must be opted into with `--path`.
+- **Remaining:** emit a warning when a local file has a built-in name, and
+  support signed/explicit module overrides if ever needed.
 
 ### T5 — Denial of service through unbounded execution (High)
 
@@ -214,8 +221,9 @@ current default configuration.
 - **Evidence:** uses Python's `random` (Mersenne Twister).
 - **Impact:** predictable values if used for tokens, passwords, keys, or
   nonces.
-- **Mitigation:** document “not for security”; add a separate `siri` module
-  backed by `secrets`/`os.urandom`; lint/document the distinction.
+- **Mitigation (implemented):** `kansa` is documented as “not for security”
+  and a separate `siri` module provides `tokeni`, `baiti`, `namba`, `chagua`,
+  and constant-time `linganisha` backed by Python's `secrets`.
 
 ### T10 — Destructive default: overwrite and delete (Medium)
 
@@ -233,8 +241,10 @@ current default configuration.
   lists any directory.
 - **Impact:** escape from an intended working directory; read/list outside a
   project; write through a symlink to a sensitive target.
-- **Mitigation:** confine to allowed roots after `realpath` resolution;
-  reject symlink escapes; capability flags.
+- **Mitigation (implemented for `faili`):** `--allow-fs` confines to allowed
+  roots after `realpath` resolution, rejecting `..` and symlink escapes.
+  `mfumo` directory listing remains unconfined and is blocked wholesale under
+  `--sandbox`; per-path confinement for `mfumo` is still future work.
 
 ### T12 — Host reconnaissance (Low)
 
@@ -308,9 +318,9 @@ source line containing a secret parsed from the environment. → T8, T2.
 | Control | State |
 |---------|-------|
 | Sandbox between program and host | **partial** (`--sandbox` blocks `faili`/`mfumo`; no OS isolation) |
-| Capability/allow-list for filesystem | **absent** |
+| Capability/allow-list for filesystem | **partial** (`--allow-fs DIR`, realpath confinement) |
 | Capability/allow-list for environment | **absent** |
-| Module resolution hardening | **weak** (local file shadows built-in; CWD searched) |
+| Module resolution hardening | **present** (built-ins first; CWD not searched; explicit `--path`) |
 | Execution time / step budget | **absent** |
 | Memory / size limits | **absent** |
 | Parser nesting limit | **absent** |
@@ -318,7 +328,7 @@ source line containing a secret parsed from the environment. → T8, T2.
 | No Python `eval`/`exec` of program text | **present** (good) |
 | No `subprocess` / shell execution | **present** (good) |
 | No network capability | **present** (good) |
-| Non-crypto randomness documented | **not yet** |
+| Non-crypto randomness documented | **present** (`kansa` vs `siri`) |
 | Dependency footprint | **minimal** (no runtime deps) |
 | Security policy / disclosure channel | added with this document |
 
@@ -329,14 +339,16 @@ Priority order. Each item is a design change, not a patch.
 1. **Sandbox documentation + runner.** Ship a `docs/security/sandbox.md` with
    container and OS-specific recipes, and expand the `--sandbox` profile
    (already blocks `faili` and `mfumo`) with OS-level isolation guidance and
-   optional capability grants.
+   optional capability grants. **Done.**
 2. **Capabilities.** Add operator flags such as
    `--allow-fs=DIR` (repeatable), `--allow-env=NAME`, `--allow-exit`, and
-   make privileged modules fail closed unless granted.
+   make privileged modules fail closed unless granted. **`--allow-fs` done;
+   `--allow-env` and `--allow-exit` remain.**
 3. **Path confinement.** Resolve with `realpath`, reject symlink escapes,
-   confine to allowed roots.
+   confine to allowed roots. **Done for `faili`; `mfumo` still open.**
 4. **Deterministic module resolution.** Built-ins first; opt-in local
    modules; remove CWD from the default path; warn on shadowing.
+   **Done (warning not yet emitted).**
 5. **Resource budgets.** Step limit, wall-clock timeout, output cap, memory
    cap, and size limits for exponentiation, repetition, ranges, and
    collections.
@@ -344,13 +356,14 @@ Priority order. Each item is a design change, not a patch.
 7. **Safe file defaults.** Append/no-overwrite by default; confirmation for
    `futa`; optional backup.
 8. **Crypto module.** Add `siri` using `secrets`; mark `kansa` as
-   non-security.
+   non-security. **Done.**
 9. **Supply chain.** Pin build dependencies, lockfile, SBOM, signed releases,
    trusted publishing.
 10. **Diagnostics hygiene.** Redaction option and guidance for CI logs.
 11. **Security tests.** Add tests asserting that privileged modules are
     denied under a sandbox profile, that module shadowing is prevented, and
-    that size limits trigger clean errors.
+    that size limits trigger clean errors. **Sandbox, shadowing, CWD, and
+    `--allow-fs` escape tests done; size-limit tests pending item 5.**
 12. **Regular review.** Re-run this threat model whenever a capability is
     added; keep a lightweight risk register in the issue tracker.
 

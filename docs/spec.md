@@ -238,8 +238,23 @@ tumia orodha_kazi kama or
 andika or.pangilia([3, 1, 2])   # [1, 2, 3]
 ```
 
-Modules are loaded from the standard library, from a `moduli/` directory next
-to the running program, or from the program's own directory.
+Modules are resolved deterministically: built-in modules are considered first,
+then `<jina>.kisw` in the program's own directory, in a `moduli/`
+subdirectory, and in directories added with `--path DIR`. The current working
+directory is never searched implicitly. This prevents a local file from
+shadowing a trusted standard module.
+
+```powershell
+python -m swahili --path ./lib program.kisw
+```
+
+Capability flags for untrusted code:
+
+| Flag | Effect |
+|------|--------|
+| `--sandbox` | refuse `faili` and `mfumo` |
+| `--allow-fs DIR` | allow `faili` only inside `DIR` (repeatable); with `--sandbox`, `mfumo` stays blocked |
+| `--path DIR` | add `DIR` to the module search path |
 
 ### Standard library
 
@@ -248,7 +263,8 @@ to the running program, or from the program's own directory.
 | `hesabu` | `pi`, `e`, `kokotoa` (sqrt), `kadiria` (round), `jumla`, `zidisha`, `jumlisha`, `kipeano`, `hiki` (floor), `hapa` (ceil), `sinu`, `kosi`, `tana`, `logariti`, `eksa` |
 | `orodha_kazi` | `pangilia`, `panga`, `pangamiza`, `chomoa`, `pinganya`, `hakika` |
 | `maneno_kazi` | extra string helpers |
-| `kansa` | random helpers |
+| `kansa` | random helpers (not cryptographically secure) |
+| `siri` | `tokeni` (hex token), `baiti`, `namba`, `chagua`, `linganisha` (constant-time compare) |
 | `wakati` | time and dates |
 | `mfumo` | system and environment |
 | `faili` | file reading and writing |

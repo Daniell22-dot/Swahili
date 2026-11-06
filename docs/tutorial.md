@@ -225,8 +225,11 @@ tumia kansa
 andika kansa.namba(1, 100)
 ```
 
-Available modules: `hesabu`, `orodha_kazi`, `maneno_kazi`, `kansa`, `wakati`,
-`mfumo`, `faili`.
+Available modules: `hesabu`, `orodha_kazi`, `maneno_kazi`, `kansa`, `siri`,
+`wakati`, `mfumo`, `faili`.
+
+Use `siri` for anything security-sensitive (tokens, keys, nonces); `kansa` is
+predictable and only suitable for games and tests.
 
 ## 13. Where to go next
 

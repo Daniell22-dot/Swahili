@@ -3,6 +3,7 @@
 import io
 import os
 import sys
+import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 
@@ -443,6 +444,49 @@ class ModuleTests(unittest.TestCase):
         with self.assertRaises(KiswahiliError):
             run("tumia hesabu\nandika hesabu.haipo")
 
+    def test_builtin_wins_over_local_shadow(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, "hesabu.kisw"), "w",
+                      encoding="utf-8") as handle:
+                handle.write("kazi zidisha(a, b) { rudia 999 }\n")
+            interp = Interpreter(search_paths=[tmp])
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                interp.run_source("tumia hesabu\nandika hesabu.zidisha(2, 3)")
+            self.assertEqual(buffer.getvalue().strip(), "6")
+
+    def test_local_module_from_search_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, "zana.kisw"), "w",
+                      encoding="utf-8") as handle:
+                handle.write("kazi mara2(x) { rudia x * 2 }\n")
+            interp = Interpreter(search_paths=[tmp])
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                interp.run_source("tumia zana\nandika zana.mara2(4)")
+            self.assertEqual(buffer.getvalue().strip(), "8")
+
+    def test_cwd_is_not_a_module_search_path(self):
+        original = os.getcwd()
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, "zana_siri.kisw"), "w",
+                      encoding="utf-8") as handle:
+                handle.write("kazi x() { rudia 1 }\n")
+            os.chdir(tmp)
+            try:
+                with self.assertRaises(KiswahiliError):
+                    Interpreter().run_source("tumia zana_siri")
+            finally:
+                os.chdir(original)
+
+    def test_siri_module(self):
+        self.assertEqual(
+            value_of("tumia siri\nandika idadi(siri.tokeni(8))"), "16")
+        self.assertEqual(
+            value_of('tumia siri\nandika siri.linganisha("a", "a")'), "kweli")
+        n = int(value_of("tumia siri\nandika siri.namba(1, 3)"))
+        self.assertIn(n, (1, 2))
+
 
 class SandboxTests(unittest.TestCase):
     def _sandboxed(self):
@@ -473,6 +517,66 @@ class SandboxTests(unittest.TestCase):
             code = main(["--sandbox", "-c", "tumia faili"])
         self.assertEqual(code, 1)
         self.assertIn("sandbox", buffer.getvalue())
+
+    def test_allow_fs_confines_writes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            inside = os.path.join(tmp, "ndani.txt").replace("\\", "/")
+            interp = Interpreter(sandbox=True, allowed_fs=[tmp])
+            interp.run_source(f'tumia faili\nfaili.andika("{inside}", "habari")')
+            with open(os.path.join(tmp, "ndani.txt"), encoding="utf-8") as handle:
+                self.assertEqual(handle.read(), "habari")
+
+    def test_allow_fs_denies_escape(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outside = os.path.join(os.path.dirname(tmp),
+                                   "swahili_nje_test.txt").replace("\\", "/")
+            interp = Interpreter(sandbox=True, allowed_fs=[tmp])
+            try:
+                with self.assertRaises(KiswahiliError):
+                    interp.run_source(
+                        f'tumia faili\nfaili.andika("{outside}", "x")')
+            finally:
+                if os.path.exists(outside):
+                    os.remove(outside)
+
+    def test_allow_fs_denies_dotdot_escape(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            escape = os.path.join(tmp, "..", "swahili_dotdot_test.txt")
+            escape = escape.replace("\\", "/")
+            interp = Interpreter(sandbox=True, allowed_fs=[tmp])
+            try:
+                with self.assertRaises(KiswahiliError):
+                    interp.run_source(
+                        f'tumia faili\nfaili.andika("{escape}", "x")')
+            finally:
+                real = os.path.realpath(escape)
+                if os.path.exists(real):
+                    os.remove(real)
+
+    def test_allow_fs_still_blocks_system_module(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(KiswahiliError):
+                Interpreter(sandbox=True, allowed_fs=[tmp]).run_source(
+                    "tumia mfumo")
+
+    def test_cli_allow_fs_flag(self):
+        from swahili.cli import main
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "cli.txt").replace("\\", "/")
+            code = main(["--sandbox", "--allow-fs", tmp, "-c",
+                         f'tumia faili\nfaili.andika("{path}", "x")'])
+            self.assertEqual(code, 0)
+            self.assertTrue(os.path.isfile(os.path.join(tmp, "cli.txt")))
+
+    def test_cli_path_flag(self):
+        from swahili.cli import main
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, "zana.kisw"), "w",
+                      encoding="utf-8") as handle:
+                handle.write("kazi mara2(x) { rudia x * 2 }\n")
+            code = main(["--path", tmp, "-c",
+                         "tumia zana\nandika zana.mara2(4)"])
+            self.assertEqual(code, 0)
 
 
 class ParserTests(unittest.TestCase):

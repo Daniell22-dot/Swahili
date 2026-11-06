@@ -53,11 +53,11 @@ exhaustion and does not replace a container or low-privileged account.
 
 | Area | Risk |
 |------|------|
-| `faili` module | unrestricted read/write/delete on the host filesystem |
+| `faili` module | full read/write/delete on the host filesystem unless `--allow-fs DIR` confines it |
 | `mfumo` module | exposes environment variables and directory listings |
 | `wakati.sekunde` | arbitrary sleeps; used for denial of service |
-| `kansa` module | **not** cryptographically secure |
-| `tumia` resolution | a local `NAME.kisw` shadows a built-in module; the current working directory is searched |
+| `kansa` module | **not** cryptographically secure; use `siri` for tokens and keys |
+| `tumia` resolution | built-ins win and the current directory is not searched; explicit `--path DIR` directories are trusted |
 | loops / big integers / repetition | no resource budget; memory and CPU exhaustion |
 | diagnostics | errors can echo source lines into logs |
 
