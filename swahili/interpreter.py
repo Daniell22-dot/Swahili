@@ -429,7 +429,10 @@ class Interpreter:
             if name in ("orodha", "kamusi", "hakuna"):
                 raise self._oops(node, f"Mwanafunzi hana '{name}'",
                                  f"Instance has no '{name}'")
-            return kitabu.get_member(self, dict(holder.fields), name)
+            try:
+                return kitabu.get_member(self, dict(holder.fields), name)
+            except TypeError as exc:
+                raise self._oops(node, str(exc), str(exc)) from None
 
         if isinstance(holder, SwahiliClass):
             method = holder.methods.get(name)

@@ -1,10 +1,10 @@
 # --------------------------------------------------------
-#  Duka — darasa, orodha na hesabu pamoja.
+#  Duka (Shop) — class with constructor, fields, and methods.
 #  Run: python -m swahili examples/duka.kisw
 # --------------------------------------------------------
 
 darasa Bidhaa {
-    jina                       # sifa (field)
+    jina              # sifa (field)
     bei
     idadi_katika_hifadhi
 

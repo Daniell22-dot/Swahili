@@ -349,8 +349,8 @@ class Parser:
                 if self.tok.type in TYPE_TOKENS:
                     self.advance()
                 if self.check("IDENT"):
-                    name = self.advance().value
-                    fields.append(name)
+                    field_name = self.advance().value
+                    fields.append(field_name)
                     if self.match("ASSIGN"):
                         defaults[name] = self.expression()
                     self._end_statement()
@@ -394,6 +394,11 @@ class Parser:
                 if self.tok.type in TYPE_TOKENS and \
                         self.tokens[self.current + 1].type == "IDENT":
                     hint = TYPE_NAMES[self.advance().type]
+                elif self.tok.type in TYPE_TOKENS and \
+                        self.tokens[self.current + 1].type == "LPAREN":
+                    # TYPE_TOKEN given without a name, e.g. `ongeza_kidhi(namba)`.
+                    # Consume the type token and treat the parameter as untyped.
+                    self.advance()
                 name = self.expect("IDENT", "jina la kipimo").value
                 default = None
                 if self.match("ASSIGN"):

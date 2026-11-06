@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+#  Furaha — Demonstrates arrays and basic operations.
+#  Run: python -m swahili examples/furaha.kisw
+# --------------------------------------------------------
+
+tumia hisabati
+andika " Furaha!"
+
+# Array operations
+andika "Array: " + [1, 2, 3, 4, 5]
+
+# Array length
+andika "Length: " + hisabati.idadi([1, 2, 3, 4, 5])
+
+# Sorted array
+andika "Sorted: " + hisabati.pangilia([5, 1, 3])
+
+# Shuffled array
+andika "Shuffled: " + hisabati.pinganya([1, 2, 3, 4, 5])
+
+# Farewell
+andika " Furaha!"
