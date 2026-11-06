@@ -2,7 +2,7 @@
 #  HAPA KULINGANA!  /  WELCOME!
 #  Kiswahili — a general-purpose programming language in Kiswahili.
 #
-#  Run me:   python -m swahili docs/hello.kisw
+#  Run me:   python -m swahili examples/karibu.kisw
 # ==========================================================
 
 

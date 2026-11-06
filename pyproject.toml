@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kiswahili"
+version = "0.1.0"
+description = "A general-purpose programming language in Kiswahili (Swahili)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Kiswahili contributors" }]
+keywords = ["language", "interpreter", "swahili", "kiswahili", "education"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Natural Language :: Swahili",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Interpreters",
+]
+
+[project.urls]
+Homepage = "https://github.com/Daniell22-dot/Swahili"
+
+[project.scripts]
+swahili = "swahili.cli:main"
+
+[tool.setuptools]
+packages = ["swahili"]
