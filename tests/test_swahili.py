@@ -387,7 +387,7 @@ class DataTests(unittest.TestCase):
             '"abc".anzia("ab")': "kweli",
             '"abc".ina("bc")': "kweli",
             '"abc".idadi': "3",
-            '"abc"[1:3]': '"bc"',
+            '"abc"[1:3]': "bc",
         }
         for expression, expected in cases.items():
             self.assertEqual(value_of(f"andika {expression}"), expected)

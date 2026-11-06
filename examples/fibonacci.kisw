@@ -25,4 +25,4 @@ kazi fibo_kumbukumbu(n) {
 }
 
 andika ""
-andika "Kwa kumbukumbu, fibo(40) = " + fibo_kumbukumbu(40)
+andika f"Kwa kumbukumbu, fibo(40) = {fibo_kumbukumbu(40)}"

@@ -179,8 +179,14 @@ class Parser:
         if self.tok.type != "IDENT" or self.tokens[self.current + 1].type \
                 not in CAN_START_EXPRESSION:
             return False
-        if self.tokens[self.current + 1].type == "LBRACKET" and self._is_index_assign():
-            return False
+        nxt = self.tokens[self.current + 1]
+        if nxt.type == "LBRACKET":
+            # `d[0]` (no space) is indexing, while `andika [1, 2]`
+            # (space) is a space-separated call with a list argument.
+            if nxt.index == self.tok.index + len(self.tok.value):
+                return False
+            if self._is_index_assign():
+                return False
         return not self._at_argument_stop()
 
     def _is_index_assign(self) -> bool:
@@ -394,11 +400,6 @@ class Parser:
                 if self.tok.type in TYPE_TOKENS and \
                         self.tokens[self.current + 1].type == "IDENT":
                     hint = TYPE_NAMES[self.advance().type]
-                elif self.tok.type in TYPE_TOKENS and \
-                        self.tokens[self.current + 1].type == "LPAREN":
-                    # TYPE_TOKEN given without a name, e.g. `ongeza_kidhi(namba)`.
-                    # Consume the type token and treat the parameter as untyped.
-                    self.advance()
                 name = self.expect("IDENT", "jina la kipimo").value
                 default = None
                 if self.match("ASSIGN"):

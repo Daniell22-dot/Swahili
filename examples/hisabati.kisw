@@ -1,14 +1,18 @@
 # --------------------------------------------------------
-#  Hisabati — hisabati hisabati (math operations).
+#  Hisabati — math operations with the `hesabu` module.
 #  Run: python -m swahili examples/hisabati.kisw
 # --------------------------------------------------------
 
-# Hisabati (hisabati) hisabati hisabati
+tumia hesabu
+
 andika f"10 + 5 = {10 + 5}"
 andika f"10 - 3 = {10 - 3}"
 andika f"10 * 5 = {10 * 5}"
 andika f"10 / 3 = {10 / 3}"
 andika f"10 % 3 = {10 % 3}"
 
-# Farewell
+andika f"Jumla ya 1..10 = {hesabu.jumla(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)}"
+andika f"Kokotoa ya 16 = {hesabu.kokotoa(16)}"
+andika f"Pi = {hesabu.pi()}"
+
 andika "Hisabati imeanza!"

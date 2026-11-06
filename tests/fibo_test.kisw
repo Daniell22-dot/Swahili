@@ -1,6 +1,0 @@
-kazi fibo(n) {
-    kama n < 2 { rudia n }
-    rudia fibo(n-1) + fibo(n-2)
-}
-
-andika f"fibo(10) = {fibo(10)}"

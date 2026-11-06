@@ -19,8 +19,8 @@ darasa Bidhaa {
         rudia mwenyewe.bei * mwenyewe.idadi_katika_hifadhi
     }
 
-    kazi ongeza_kidhi(namba) {
-        mwenyewe.idadi_katika_hifadhi += namba
+    kazi ongeza_kidhi(kiasi) {
+        mwenyewe.idadi_katika_hifadhi += kiasi
         rudia mwenyewe
     }
 
