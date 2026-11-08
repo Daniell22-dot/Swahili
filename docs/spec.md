@@ -208,6 +208,31 @@ andika m.jina
 - `tengeneza Darasa(...)` creates an instance; `ainake(instance)` is
   `mwanafunzi`.
 
+### Inheritance
+
+```kiswahili
+darasa Mnyama {
+    jina
+    kazi Mnyama(jina) { mwenyewe.jina = jina }
+    kazi sema() { rudia "Mimi ni " + mwenyewe.jina }
+}
+
+darasa Mbwa inarithi Mnyama {
+    kazi Mbwa(jina) { mzazi.Mnyama(jina) }
+    kazi sema() { rudia mzazi.sema() + " (mbwa)" }
+}
+
+andika (tengeneza Mbwa("Rex")).sema()   # Mimi ni Rex (mbwa)
+```
+
+- `darasa B inarithi A { }` makes `B` inherit `A`'s fields, methods, and
+  constructor when `B` does not declare its own.
+- `mzazi` is available inside methods and points at the parent class; use
+  `mzazi.jina_la_kazi(...)` to call an overridden method (including the
+  constructor).
+- A method in the subclass overrides a method with the same name in the
+  parent.
+
 ## 10. Errors
 
 ```kiswahili

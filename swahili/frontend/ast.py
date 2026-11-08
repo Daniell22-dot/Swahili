@@ -263,6 +263,7 @@ class ClassDef(Node):
     fields: list[str]
     body: Block
     defaults: dict[str, Node] = field(default_factory=dict)
+    parent: str | None = None
 
 
 @dataclass

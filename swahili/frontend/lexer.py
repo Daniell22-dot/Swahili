@@ -30,6 +30,7 @@ KEYWORDS = {
     "jaribu": "TRY", "kosa": "EXCEPT", "mwisho": "FINALLY", "tupa": "THROW",
     # declarations
     "kazi": "DEF", "darasa": "CLASS", "tengeneza": "NEW", "mwenyewe": "SELF",
+    "inarithi": "EXTENDS",
     "tumia": "IMPORT",
     # operators spelled as words
     "na": "AND", "au": "OR", "sio": "NOT", "iko": "INOP", "ni": "IS",

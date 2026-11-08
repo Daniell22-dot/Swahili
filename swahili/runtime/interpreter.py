@@ -16,7 +16,7 @@ from ..errors import (Endelea, KiswahiliError, Kosa, Rudeia, RuntimeErr,
                       TupaImbali, Vunja)
 from ..frontend.parser import parse
 from .values import (BoundMethod, Environment, KiswahiliModule,
-                     NativeFunction, SwahiliClass, SwahiliFunction,
+                     NativeFunction, SuperProxy, SwahiliClass, SwahiliFunction,
                      SwahiliInstance, display, iterate, type_name)
 
 MAX_DEPTH = 200
@@ -236,7 +236,19 @@ class Interpreter:
             node.type_hint, node.arrow_hint))
 
     def _exec_class_def(self, node: ast.ClassDef, env: Environment) -> None:
-        cls = SwahiliClass(node.name, node.fields, env, node.defaults)
+        parent = None
+        if node.parent:
+            try:
+                parent = env.get(node.parent)
+            except KeyError:
+                raise self._oops(
+                    node, f"Hamna darasa jina la '{node.parent}'",
+                    f"No class named '{node.parent}'") from None
+            if not isinstance(parent, SwahiliClass):
+                raise self._oops(
+                    node, f"'{node.parent}' siyo darasa",
+                    f"'{node.parent}' is not a class")
+        cls = SwahiliClass(node.name, node.fields, env, node.defaults, parent)
         env.define(node.name, cls)
         # methods live in their own scope so they do not leak into the
         # surrounding namespace, but still close over it
@@ -492,12 +504,20 @@ class Interpreter:
         return self.get_member(node, holder, node.name)
 
     def get_member(self, node, holder: Any, name: str) -> Any:
+        if isinstance(holder, SuperProxy):
+            method, owner = holder.start.find_method(name)
+            if method is not None:
+                return BoundMethod(method, holder.instance, owner)
+            raise self._oops(
+                node, f"Mzazi hana kazi '{name}'",
+                f"Parent class has no method '{name}'")
+
         if isinstance(holder, SwahiliInstance):
             if name in holder.fields:
                 return holder.fields[name]
-            method = holder.cls.methods.get(name)
+            method, owner = holder.cls.find_method(name)
             if method is not None:
-                return BoundMethod(method, holder)
+                return BoundMethod(method, holder, owner)
             if name in ("orodha", "kamusi", "hakuna"):
                 raise self._oops(node, f"Mwanafunzi hana '{name}'",
                                  f"Instance has no '{name}'")
@@ -507,7 +527,7 @@ class Interpreter:
                 raise self._oops(node, str(exc), str(exc)) from None
 
         if isinstance(holder, SwahiliClass):
-            method = holder.methods.get(name)
+            method, _ = holder.find_method(name)
             if method is not None:
                 return method
             raise self._oops(node, f"Darasa '{holder.name}' haina kazi '{name}'",
@@ -552,9 +572,12 @@ class Interpreter:
                              f"'{node.class_name}' is not a class")
 
         instance = SwahiliInstance(cls)
-        for field, expression in cls.defaults.items():
-            instance.fields[field] = self.evaluate(expression, cls.closure)
-        constructor = cls.methods.get(node.class_name)
+        for owner_cls in reversed(cls.lineage()):
+            for field_name, expression in owner_cls.defaults.items():
+                if field_name in instance.fields:
+                    instance.fields[field_name] = self.evaluate(
+                        expression, owner_cls.closure)
+        constructor, owner = cls.find_constructor()
         if constructor is not None:
             args = [self.evaluate(arg, env) for arg in node.args]
             kwargs = {key: self.evaluate(value, env)
@@ -562,9 +585,11 @@ class Interpreter:
             local = Environment(constructor.closure)
             local.define("mwenyewe", instance)
             self._run_function(constructor, local, args, kwargs, node,
-                               self_instance=instance)
+                               self_instance=instance, owner=owner)
         elif node.args or node.kwargs:
-            names = ", ".join(cls.methods) or "hakuna"
+            names = ", ".join(
+                name for owner_cls in cls.lineage()
+                for name in owner_cls.methods) or "hakuna"
             raise self._oops(
                 node,
                 f"Darasa '{cls.name}' haina mjenzi (kazi '{cls.name}')",
@@ -593,7 +618,8 @@ class Interpreter:
                 local = Environment(fn.function.closure)
                 local.define("mwenyewe", fn.instance)
                 return self._run_function(fn.function, local, args, kwargs, node,
-                                         self_instance=fn.instance)
+                                         self_instance=fn.instance,
+                                         owner=fn.owner)
 
             if isinstance(fn, SwahiliFunction):
                 local = Environment(fn.closure)
@@ -617,7 +643,8 @@ class Interpreter:
                          f"{where} is not callable")
 
     def _run_function(self, fn: SwahiliFunction, local: Environment, args: list,
-                      kwargs: dict, node, self_instance=None) -> Any:
+                      kwargs: dict, node, self_instance=None,
+                      owner: SwahiliClass | None = None) -> Any:
         params = fn.params
         if len(args) > len(params):
             raise self._oops(
@@ -652,6 +679,10 @@ class Interpreter:
             raise self._oops(node,
                              f"Kazi '{fn.name}' haijui vigezo: {extra}",
                              f"'{fn.name}' got unexpected argument(s): {extra}")
+
+        if (self_instance is not None and owner is not None
+                and owner.parent is not None):
+            local.define("mzazi", SuperProxy(self_instance, owner.parent))
 
         self.depth += 1
         try:

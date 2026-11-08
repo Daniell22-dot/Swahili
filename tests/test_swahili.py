@@ -579,6 +579,48 @@ class SandboxTests(unittest.TestCase):
             self.assertEqual(code, 0)
 
 
+class InheritanceTests(unittest.TestCase):
+    def test_inherited_method_and_constructor(self):
+        source = """
+darasa Mnyama {
+    jina
+    kazi Mnyama(jina) { mwenyewe.jina = jina }
+    kazi sema() { rudia "Mimi ni " + mwenyewe.jina }
+}
+darasa Mbwa inarithi Mnyama {
+    kazi Mbwa(jina) { mzazi.Mnyama(jina) }
+}
+a = tengeneza Mbwa("Rex")
+andika a.sema()
+"""
+        self.assertEqual(value_of(source), "Mimi ni Rex")
+
+    def test_override_and_super(self):
+        source = """
+darasa Mnyama {
+    kazi sema() { rudia "mnyama" }
+}
+darasa Mbwa inarithi Mnyama {
+    kazi sema() { rudia mzazi.sema() + " mbwa" }
+}
+andika (tengeneza Mbwa()).sema()
+"""
+        self.assertEqual(value_of(source), "mnyama mbwa")
+
+    def test_inherited_fields_and_defaults(self):
+        source = """
+darasa A { x = 1 }
+darasa B inarithi A { y = 2 }
+b = tengeneza B()
+andika b.x + b.y
+"""
+        self.assertEqual(value_of(source), "3")
+
+    def test_unknown_parent(self):
+        with self.assertRaises(KiswahiliError):
+            value_of("darasa B inarithi Haipo { }")
+
+
 class BudgetTests(unittest.TestCase):
     def test_step_budget_stops_infinite_loop(self):
         with self.assertRaises(KiswahiliError):

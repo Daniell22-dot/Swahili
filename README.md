@@ -64,6 +64,11 @@ darasa Mwalimu {
 m = tengeneza Mwalimu("Bi Juma", "matematika")
 andika m.wasilisha()
 
+# inheritance
+darasa MwalimuMkuu inarithi Mwalimu {
+    kazi wasilisha() { rudia mzazi.wasilisha() + " (mkuu)" }
+}
+
 # errors
 jaribu {
     tupa "kitu kimeharibika"
@@ -91,6 +96,7 @@ See `examples/karibu.kisw` for a tour of every feature, and
 | `vunja` / `endelea` | break / continue | | `kazi` | function |
 | `darasa` | class | | `tengeneza` | new |
 | `mwenyewe` | self | | `tumia` | import |
+| `inarithi` / `mzazi` | extends / super | | | |
 | `jaribu` / `kosa` / `mwisho` | try / except / finally | | `tupa` | throw |
 | `namba` / `desimali` / `maneno` | int / float / string | | `orodha` / `kamusi` | list / dict |
 | `hali` / `hakuna` | bool / null | | `na` / `au` / `sio` | and / or / not |

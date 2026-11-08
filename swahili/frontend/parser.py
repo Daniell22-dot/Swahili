@@ -343,6 +343,9 @@ class Parser:
     def class_statement(self) -> ast.ClassDef:
         self.advance()  # darasa
         name = self.expect("IDENT", "jina la darasa").value
+        parent = None
+        if self.match("EXTENDS"):
+            parent = self.expect("IDENT", "jina la darasa la mzazi").value
         self.expect("LBRACE", "'{' kuanza wazi")
         fields: list[str] = []
         defaults: dict[str, ast.Node] = {}
@@ -358,13 +361,13 @@ class Parser:
                     field_name = self.advance().value
                     fields.append(field_name)
                     if self.match("ASSIGN"):
-                        defaults[name] = self.expression()
+                        defaults[field_name] = self.expression()
                     self._end_statement()
                     continue
                 self.current = save
             body.append(self.statement())
         self.expect("RBRACE", "'}' kufunga darasa")
-        return ast.ClassDef(name, fields, ast.Block(body), defaults)
+        return ast.ClassDef(name, fields, ast.Block(body), defaults, parent)
 
     def function_statement(self) -> ast.FuncDef:
         self.advance()  # kazi

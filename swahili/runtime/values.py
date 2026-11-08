@@ -97,15 +97,47 @@ class SwahiliFunction:
 
 
 class SwahiliClass:
-    __slots__ = ("name", "fields", "methods", "closure", "defaults")
+    __slots__ = ("name", "fields", "methods", "closure", "defaults", "parent")
 
     def __init__(self, name: str, fields: list[str], closure: Environment,
-                 defaults: dict[str, Any] | None = None):
+                 defaults: dict[str, Any] | None = None,
+                 parent: "SwahiliClass | None" = None):
         self.name = name
         self.fields = fields
         self.methods: dict[str, SwahiliFunction] = {}
         self.closure = closure
         self.defaults = defaults or {}
+        self.parent = parent
+
+    def lineage(self) -> list["SwahiliClass"]:
+        chain: list[SwahiliClass] = []
+        cls: SwahiliClass | None = self
+        while cls is not None:
+            chain.append(cls)
+            cls = cls.parent
+        return chain
+
+    def find_method(self, name: str):
+        for cls in self.lineage():
+            method = cls.methods.get(name)
+            if method is not None:
+                return method, cls
+        return None, None
+
+    def find_constructor(self):
+        for cls in self.lineage():
+            ctor = cls.methods.get(cls.name)
+            if ctor is not None:
+                return ctor, cls
+        return None, None
+
+    def all_fields(self) -> list[str]:
+        names: list[str] = []
+        for cls in reversed(self.lineage()):
+            for field_name in cls.fields:
+                if field_name not in names:
+                    names.append(field_name)
+        return names
 
     def __repr__(self) -> str:
         return f"<darasa {self.name}>"
@@ -116,7 +148,7 @@ class SwahiliInstance:
 
     def __init__(self, cls: SwahiliClass):
         self.cls = cls
-        self.fields: dict[str, Any] = {name: None for name in cls.fields}
+        self.fields: dict[str, Any] = {name: None for name in cls.all_fields()}
 
     @property
     def name(self) -> str:
@@ -128,14 +160,29 @@ class SwahiliInstance:
 
 
 class BoundMethod:
-    __slots__ = ("function", "instance")
+    __slots__ = ("function", "instance", "owner")
 
-    def __init__(self, function: SwahiliFunction, instance: SwahiliInstance):
+    def __init__(self, function: SwahiliFunction, instance: SwahiliInstance,
+                 owner: SwahiliClass | None = None):
         self.function = function
         self.instance = instance
+        self.owner = owner
 
     def __repr__(self) -> str:
         return f"<kazi {self.function.name} ya {self.instance.name}>"
+
+
+class SuperProxy:
+    """`mzazi` inside a method: lookup starting at the parent class."""
+
+    __slots__ = ("instance", "start")
+
+    def __init__(self, instance: SwahiliInstance, start: SwahiliClass):
+        self.instance = instance
+        self.start = start
+
+    def __repr__(self) -> str:
+        return f"<mzazi {self.start.name}>"
 
 
 class KiswahiliModule:
