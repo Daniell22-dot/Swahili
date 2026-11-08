@@ -130,7 +130,8 @@ directory plus any `--path DIR` entries are searched (never the current
 working directory). Run untrusted code with `--sandbox`; add `--allow-fs DIR`
 to permit `faili` inside a specific directory while `mfumo` stays blocked.
 Step, collection/repetition, and output budgets are on by default and can be
-tuned with `--max-steps`, `--max-collection`, and `--max-output`.
+tuned with `--max-steps`, `--max-collection`, and `--max-output`. Add
+`--max-seconds S` for a wall-clock deadline (checked between executed nodes).
 
 ## Project layout
 

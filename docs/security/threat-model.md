@@ -327,8 +327,8 @@ source line containing a secret parsed from the environment. → T8, T2.
 | Capability/allow-list for filesystem | **partial** (`--allow-fs DIR`, realpath confinement) |
 | Capability/allow-list for environment | **absent** |
 | Module resolution hardening | **present** (built-ins first; CWD not searched; explicit `--path`) |
-| Execution time / step budget | **present** (statement budget `--max-steps`, default 10,000,000; output cap `--max-output`, default 10,000,000; wall-clock timeout pending) |
-| Memory / size limits | **present** (collection/repetition/range/exponent size caps `--max-collection`, default 1,000,000; exponent bounds default; wall-clock timeout pending) |
+| Execution time / step budget | **present** (statement budget `--max-steps`, default 10,000,000; wall-clock `--max-seconds`; output cap `--max-output`, default 10,000,000) |
+| Memory / size limits | **present** (collection/repetition/range/exponent size caps `--max-collection`, default 1,000,000; exponent bounds default) |
 | Parser nesting limit | **present** (64 levels; clean bilingual error) |
 | Recursion limit (language) | present (200) |
 | No Python `eval`/`exec` of program text | **present** (good) |
@@ -357,8 +357,8 @@ Priority order. Each item is a design change, not a patch.
    **Done (warning not yet emitted).**
 5. **Resource budgets.** Step limit, wall-clock timeout, output cap, memory
    cap, and size limits for exponentiation, repetition, ranges, and
-   collections. **Done for steps/output/collections/sizes; wall-clock timeout
-   remains.**
+   collections. **Done for steps/wall-clock/output/collections/sizes; a
+   hard memory (RSS) cap remains an OS concern.**
 6. **Parser/lexer robustness.** Explicit nesting depth limit; fuzzing.
    **Limit done (64); fuzzing remains.**
 7. **Safe file defaults.** Append/no-overwrite by default; confirmation for

@@ -8,6 +8,7 @@ written, which is what makes Kiswahili closures work.
 from __future__ import annotations
 
 import os
+import time
 from typing import Any, Callable
 
 from ..frontend import ast
@@ -45,7 +46,8 @@ class Interpreter:
                  allowed_fs: list[str] | None = None,
                  max_steps: int | None = DEFAULT_MAX_STEPS,
                  max_collection: int | None = DEFAULT_MAX_COLLECTION,
-                 max_output: int | None = DEFAULT_MAX_OUTPUT):
+                 max_output: int | None = DEFAULT_MAX_OUTPUT,
+                 max_seconds: float | None = None):
         self.builtin_env = Environment()
         kitabu.install(self.builtin_env)
         self.globals = Environment(self.builtin_env)
@@ -58,6 +60,8 @@ class Interpreter:
         self.max_steps = max_steps
         self.max_collection = max_collection
         self.max_output = max_output
+        self.max_seconds = max_seconds
+        self.started = 0.0
         self.steps = 0
         self.output_chars = 0
         # `None` means "no confinement"; a list (possibly empty) confines the
@@ -80,6 +84,7 @@ class Interpreter:
         if not self.frames:
             self.steps = 0
             self.output_chars = 0
+            self.started = time.monotonic()
         self.frames.append((filename, source))
         try:
             self.execute(program, env or self.globals)
@@ -101,6 +106,12 @@ class Interpreter:
             raise RuntimeErr(
                 f"Mpango umezidi kikomo cha hatua ({self.max_steps})",
                 f"Step budget of {self.max_steps} exceeded",
+                line=getattr(node, "line", 0))
+        if (self.max_seconds is not None
+                and time.monotonic() - self.started > self.max_seconds):
+            raise RuntimeErr(
+                f"Mpango umezidi kikomo cha muda ({self.max_seconds}s)",
+                f"Time budget of {self.max_seconds}s exceeded",
                 line=getattr(node, "line", 0))
         method = self._DISPATCH.get(type(node))
         if method is None:

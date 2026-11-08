@@ -688,6 +688,14 @@ class BudgetTests(unittest.TestCase):
         with self.assertRaises(KiswahiliError):
             Interpreter(max_output=5).run_source('andika "abcdefghij"')
 
+    def test_time_budget_stops_infinite_loop(self):
+        with self.assertRaises(KiswahiliError):
+            Interpreter(max_seconds=0.0).run_source("wakati kweli { x = 1 }")
+
+    def test_time_budget_allows_quick_program(self):
+        with redirect_stdout(io.StringIO()):
+            Interpreter(max_seconds=5).run_source("andika 1")
+
     def test_budgets_reset_between_runs(self):
         interp = Interpreter(max_steps=100)
         with redirect_stdout(io.StringIO()):

@@ -68,6 +68,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="cap range/repetition size at N elements")
     parser.add_argument("--max-output", type=int, default=None, metavar="N",
                         help="cap printed output at N characters")
+    parser.add_argument("--max-seconds", type=float, default=None, metavar="S",
+                        help="abort after S seconds of wall-clock time")
     parser.add_argument("-h", "--help", action="help", help=__doc__)
     args = parser.parse_args(argv)
 
@@ -83,6 +85,8 @@ def main(argv: list[str] | None = None) -> int:
         limits["max_collection"] = args.max_collection
     if args.max_output is not None:
         limits["max_output"] = args.max_output
+    if args.max_seconds is not None:
+        limits["max_seconds"] = args.max_seconds
 
     interpreter = Interpreter(repl_hook=None, search_paths=search_paths,
                               sandbox=args.sandbox, allowed_fs=args.allow_fs,

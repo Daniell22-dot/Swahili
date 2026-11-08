@@ -291,6 +291,7 @@ Capability flags for untrusted code:
 | `--max-steps N` | abort after `N` executed nodes (default 10,000,000) |
 | `--max-collection N` | cap ranges/repetition at `N` elements (default 1,000,000) |
 | `--max-output N` | cap printed output at `N` characters (default 10,000,000) |
+| `--max-seconds S` | abort after `S` seconds of wall-clock time (default: off) |
 
 ### Standard library
 
