@@ -54,7 +54,7 @@ exhaustion and does not replace a container or low-privileged account.
 | Area | Risk |
 |------|------|
 | `faili` module | full read/write/delete on the host filesystem unless `--allow-fs DIR` confines it |
-| `mfumo` module | exposes environment variables and directory listings |
+| `mfumo` module | exposes environment variables and directory listings unless sandboxed; `--allow-env NAME` grants only named variables |
 | `wakati.sekunde` | arbitrary sleeps; used for denial of service |
 | `kansa` module | **not** cryptographically secure; use `siri` for tokens and keys |
 | `tumia` resolution | built-ins win and the current directory is not searched; explicit `--path DIR` directories are trusted |

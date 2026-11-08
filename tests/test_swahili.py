@@ -601,6 +601,25 @@ class SandboxTests(unittest.TestCase):
                 Interpreter(sandbox=True, allowed_fs=[tmp]).run_source(
                     "tumia mfumo")
 
+    def test_allow_env_grants_filtered_access(self):
+        interp = Interpreter(sandbox=True, allowed_env=["PATH"])
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            interp.run_source('tumia mfumo\nandika mfumo.mazingira("PATH")')
+        self.assertEqual(buffer.getvalue().strip(), os.environ.get("PATH"))
+
+    def test_allow_env_filters_other_names(self):
+        interp = Interpreter(sandbox=True, allowed_env=["HATOKUWEPO"])
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            interp.run_source('tumia mfumo\nandika mfumo.mazingira("PATH")')
+        self.assertEqual(buffer.getvalue().strip(), "hakuna")
+
+    def test_allow_env_hides_other_system_functions(self):
+        interp = Interpreter(sandbox=True, allowed_env=["PATH"])
+        with self.assertRaises(KiswahiliError):
+            interp.run_source("tumia mfumo\nandika mfumo.orodha()")
+
     def test_cli_allow_fs_flag(self):
         from swahili.cli import main
         with tempfile.TemporaryDirectory() as tmp:

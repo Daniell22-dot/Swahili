@@ -29,9 +29,17 @@ python -m swahili --sandbox --allow-fs ./data program.kisw
 
 `--allow-fs` is repeatable and resolves `..` and symlinks before checking, so
 paths cannot escape the granted roots. With this flag `faili` is available,
-but `mfumo` remains blocked. Note that module resolution only searches the
-program's directory and explicit `--path DIR` entries; the current working
-directory is never searched implicitly.
+but `mfumo` remains blocked. To grant read access to specific environment
+variables without exposing the rest of `mfumo`:
+
+```powershell
+python -m swahili --sandbox --allow-env TOKEN --allow-env HOME program.kisw
+```
+
+Under `--sandbox`, `mfumo` then contains only `mazingira`, which returns
+`hakuna` for names that were not granted. Note that module resolution only
+searches the program's directory and explicit `--path DIR` entries; the
+current working directory is never searched implicitly.
 
 ## General checklist
 
@@ -155,8 +163,9 @@ Even without a code sandbox, you can limit exposure:
 
 ## What the interpreter does not do (yet)
 
-- No environment allow-list (`mfumo` is blocked wholesale with `--sandbox`;
-  per-variable grants are not implemented).
+- Environment access is per-variable only (`--allow-env NAME`); there is no
+  pattern or prefix grant, and `--allow-env` under `--sandbox` hides every
+  other `mfumo` function.
 - The wall-clock timeout (`--max-seconds`) is checked between executed nodes,
   so a long blocking native call such as `wakati.sekunde` still runs to
   completion.

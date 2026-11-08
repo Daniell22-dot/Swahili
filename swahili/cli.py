@@ -60,6 +60,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-fs", action="append", metavar="DIR",
                         help="confine `faili` to DIR (repeatable; "
                              "combine with --sandbox to allow only DIR)")
+    parser.add_argument("--allow-env", action="append", metavar="NAME",
+                        help="let `mfumo.mazingira` read only NAME "
+                             "(repeatable; enables env access under --sandbox)")
     parser.add_argument("--path", action="append", metavar="DIR", default=[],
                         help="add a directory to the module search path")
     parser.add_argument("--max-steps", type=int, default=None, metavar="N",
@@ -90,6 +93,7 @@ def main(argv: list[str] | None = None) -> int:
 
     interpreter = Interpreter(repl_hook=None, search_paths=search_paths,
                               sandbox=args.sandbox, allowed_fs=args.allow_fs,
+                              allowed_env=args.allow_env,
                               **limits)
     interpreter.repl_hook = lambda env: repl_loop(interpreter, env, quiet=True)
 

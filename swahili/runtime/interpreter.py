@@ -44,6 +44,7 @@ class Interpreter:
                  search_paths: list[str] | None = None,
                  sandbox: bool = False,
                  allowed_fs: list[str] | None = None,
+                 allowed_env: list[str] | None = None,
                  max_steps: int | None = DEFAULT_MAX_STEPS,
                  max_collection: int | None = DEFAULT_MAX_COLLECTION,
                  max_output: int | None = DEFAULT_MAX_OUTPUT,
@@ -68,10 +69,13 @@ class Interpreter:
         # `faili` module to those roots.
         self.allowed_fs = (None if allowed_fs is None
                            else [os.path.abspath(p) for p in allowed_fs])
+        # `None` means "all variables"; a list restricts `mfumo.mazingira`.
+        self.allowed_env = None if allowed_env is None else set(allowed_env)
         # Modules that reach the host directly are refused in sandbox mode.
         denied: set[str] = set()
         if sandbox:
-            denied.add("mfumo")
+            if self.allowed_env is None:
+                denied.add("mfumo")
             if self.allowed_fs is None:
                 denied.add("faili")
         self.denied_modules = denied

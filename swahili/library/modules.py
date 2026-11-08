@@ -165,13 +165,24 @@ def _wakati(interp) -> dict:
 
 
 def _mfumo(interp) -> dict:
+    allowed = getattr(interp, "allowed_env", None)
+
+    def _env(name):
+        if allowed is not None and name not in allowed:
+            return None
+        return os.environ.get(name)
+
+    mazingira = NativeFunction("mazingira", _env)
+    if getattr(interp, "sandbox", False):
+        # In the sandbox only the explicit env capability is exposed.
+        return {"mazingira": mazingira}
     return {
         "stdin_kuna": NativeFunction("stdin_kuna", lambda: sys.stdin.isatty()),
         "andika_kosa": NativeFunction("andika_kosa",
                                       lambda *xs: sys.stderr.write(
                                           " ".join(str(x) for x in xs) + "\n")),
         "ondoa_kweli": NativeFunction("ondoa_kweli", lambda: sys.stdout.isatty()),
-        "mazingira": NativeFunction("mazingira", lambda jina: os.environ.get(jina)),
+        "mazingira": mazingira,
         "folda": NativeFunction("folda", lambda p=".": os.getcwd() if p == "." else
                                 os.path.abspath(p)),
         "orodha": NativeFunction("orodha", lambda p=".": sorted(os.listdir(p))),

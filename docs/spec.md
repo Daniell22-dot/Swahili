@@ -287,6 +287,7 @@ Capability flags for untrusted code:
 |------|--------|
 | `--sandbox` | refuse `faili` and `mfumo` |
 | `--allow-fs DIR` | allow `faili` only inside `DIR` (repeatable); with `--sandbox`, `mfumo` stays blocked |
+| `--allow-env NAME` | allow `mfumo.mazingira` to read only `NAME` (repeatable); with `--sandbox`, exposes only `mazingira` |
 | `--path DIR` | add `DIR` to the module search path |
 | `--max-steps N` | abort after `N` executed nodes (default 10,000,000) |
 | `--max-collection N` | cap ranges/repetition at `N` elements (default 1,000,000) |

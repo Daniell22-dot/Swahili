@@ -148,9 +148,11 @@ current default configuration.
 - **Evidence:** `library/modules.py` returns `os.environ.get(name)`.
 - **Impact:** exfiltration of API keys and cloud credentials by source code
   that also exfiltrates through `faili` or stdout.
-- **Mitigation:** capability flag; scrub the environment passed to child
-  interpreters; document that `mfumo` is privileged. The `--sandbox` flag
-  already refuses the `mfumo` module.
+- **Mitigation (now):** capability flag `--allow-env NAME` (repeatable)
+  whitelists individual variables; under `--sandbox` the `mfumo` module is
+  reduced to `mazingira` (returns `hakuna` for ungranted names) or refused
+  entirely when no grant is present. Also scrub the environment passed to
+  child interpreters and document that `mfumo` is privileged.
 
 ### T3 — Untrusted program is arbitrary code execution (Critical, inherent)
 
@@ -325,7 +327,7 @@ source line containing a secret parsed from the environment. → T8, T2.
 |---------|-------|
 | Sandbox between program and host | **partial** (`--sandbox` blocks `faili`/`mfumo`; no OS isolation) |
 | Capability/allow-list for filesystem | **partial** (`--allow-fs DIR`, realpath confinement) |
-| Capability/allow-list for environment | **absent** |
+| Capability/allow-list for environment | **present** (`--allow-env NAME`, repeatable; sandbox exposes only `mazingira`) |
 | Module resolution hardening | **present** (built-ins first; CWD not searched; explicit `--path`) |
 | Execution time / step budget | **present** (statement budget `--max-steps`, default 10,000,000; wall-clock `--max-seconds`; output cap `--max-output`, default 10,000,000) |
 | Memory / size limits | **present** (collection/repetition/range/exponent size caps `--max-collection`, default 1,000,000; exponent bounds default) |
@@ -348,8 +350,8 @@ Priority order. Each item is a design change, not a patch.
    optional capability grants. **Done.**
 2. **Capabilities.** Add operator flags such as
    `--allow-fs=DIR` (repeatable), `--allow-env=NAME`, `--allow-exit`, and
-   make privileged modules fail closed unless granted. **`--allow-fs` done;
-   `--allow-env` and `--allow-exit` remain.**
+   make privileged modules fail closed unless granted. **`--allow-fs` and
+   `--allow-env` done; `--allow-exit` remains.**
 3. **Path confinement.** Resolve with `realpath`, reject symlink escapes,
    confine to allowed roots. **Done for `faili`; `mfumo` still open.**
 4. **Deterministic module resolution.** Built-ins first; opt-in local
