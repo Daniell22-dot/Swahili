@@ -1,10 +1,13 @@
 """Vijana — tests for Kiswahili. Run with:  python -m unittest discover tests"""
 
 import io
+import json
 import os
 import sys
 import tempfile
+import threading
 import unittest
+import http.client
 from contextlib import redirect_stderr, redirect_stdout
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -530,6 +533,81 @@ class ModuleTests(unittest.TestCase):
             self.assertEqual(buffer.getvalue().strip(), "10")
 
 
+class UmbizoTests(unittest.TestCase):
+    def test_encode(self):
+        self.assertEqual(
+            value_of('tumia umbizo\nandika umbizo.kwa_json({"a": 1})'),
+            '{"a": 1}')
+
+    def test_decode(self):
+        self.assertEqual(
+            value_of('tumia umbizo\nandika umbizo.kutoka_json("[1, 2]")[0]'),
+            "1")
+
+    def test_invalid_json(self):
+        with self.assertRaises(KiswahiliError):
+            value_of('tumia umbizo\nandika umbizo.kutoka_json("si json")')
+
+
+class ServerTests(unittest.TestCase):
+    def _app(self, source):
+        interp = Interpreter()
+        interp.run_source(source)
+        return interp, interp.server_app
+
+    def test_route_and_param(self):
+        interp, app = self._app("""
+tumia seva
+kazi salamu(ombi) {
+    rudia seva.jibu(200, "Habari " + ombi["vigezo"]["jina"])
+}
+seva.njia("GET", "/habari/{jina}", salamu)
+""")
+        response = app.dispatch("GET", "/habari/asha")
+        self.assertEqual(response["msimbo"], 200)
+        self.assertEqual(response["mwili"], "Habari asha")
+        self.assertEqual(app.dispatch("GET", "/haipo")["msimbo"], 404)
+
+    def test_query_and_body(self):
+        interp, app = self._app("""
+tumia seva
+kazi echo(ombi) {
+    rudia seva.json(200, {"hoja": ombi["hoja"], "mwili": ombi["mwili"]})
+}
+seva.njia("POST", "/echo", echo)
+""")
+        response = app.dispatch("POST", "/echo", {"a": "1"}, {}, "habari")
+        self.assertEqual(response["msimbo"], 200)
+        payload = json.loads(response["mwili"])
+        self.assertEqual(payload, {"hoja": {"a": "1"}, "mwili": "habari"})
+
+    def test_http_transport(self):
+        from swahili.server import make_server
+
+        interp, app = self._app("""
+tumia seva
+kazi nyumbani(ombi) { rudia seva.jibu(200, "Habari") }
+seva.njia("GET", "/", nyumbani)
+""")
+        app.port = 0
+        server = make_server(app)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with redirect_stderr(io.StringIO()):
+                conn = http.client.HTTPConnection(
+                    "127.0.0.1", server.server_address[1], timeout=2)
+                conn.request("GET", "/")
+                response = conn.getresponse()
+                self.assertEqual(response.status, 200)
+                self.assertEqual(response.read().decode("utf-8"), "Habari")
+                conn.close()
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join()
+
+
 class SandboxTests(unittest.TestCase):
     def _sandboxed(self):
         return Interpreter(sandbox=True)
@@ -541,6 +619,10 @@ class SandboxTests(unittest.TestCase):
     def test_blocks_system_module(self):
         with self.assertRaises(KiswahiliError):
             self._sandboxed().run_source("tumia mfumo")
+
+    def test_blocks_server_module(self):
+        with self.assertRaises(KiswahiliError):
+            self._sandboxed().run_source("tumia seva")
 
     def test_allows_safe_modules(self):
         buffer = io.StringIO()
