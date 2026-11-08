@@ -279,3 +279,4 @@ class Try(Node):
 class Import(Node):
     module: str
     alias: str | None = None
+    is_path: bool = False

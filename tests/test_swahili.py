@@ -487,6 +487,48 @@ class ModuleTests(unittest.TestCase):
         n = int(value_of("tumia siri\nandika siri.namba(1, 3)"))
         self.assertIn(n, (1, 2))
 
+    def test_import_by_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "zana2.kisw")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("kazi mara3(x) { rudia x * 3 }\n")
+            clean = path.replace("\\", "/")
+            interp = Interpreter()
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                interp.run_source(f'tumia "{clean}"\nandika zana2.mara3(2)')
+            self.assertEqual(buffer.getvalue().strip(), "6")
+
+    def test_import_by_path_alias(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "zana3.kisw")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("kazi mara4(x) { rudia x * 4 }\n")
+            clean = path.replace("\\", "/")
+            interp = Interpreter()
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                interp.run_source(
+                    f'tumia "{clean}" kama z\nandika z.mara4(2)')
+            self.assertEqual(buffer.getvalue().strip(), "8")
+
+    def test_import_missing_path(self):
+        with self.assertRaises(KiswahiliError):
+            Interpreter().run_source('tumia "haipo.kisw"')
+
+    def test_import_relative_to_program(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, "zana5.kisw"), "w",
+                      encoding="utf-8") as handle:
+                handle.write("kazi mara5(x) { rudia x * 5 }\n")
+            interp = Interpreter()
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                interp.run_source(
+                    'tumia "zana5.kisw"\nandika zana5.mara5(2)',
+                    os.path.join(tmp, "program.kisw"))
+            self.assertEqual(buffer.getvalue().strip(), "10")
+
 
 class SandboxTests(unittest.TestCase):
     def _sandboxed(self):
@@ -665,6 +707,13 @@ class ParserTests(unittest.TestCase):
     def test_missing_brace(self):
         with self.assertRaises(KiswahiliError):
             parse("kama kweli { andika 1", "t.kisw")
+
+    def test_deep_nesting_rejected(self):
+        with self.assertRaises(KiswahiliError):
+            parse("(" * 300 + "1" + ")" * 300, "t.kisw")
+
+    def test_normal_nesting_allowed(self):
+        parse("andika (((((1)))))", "t.kisw")
 
     def test_bad_assignment_target(self):
         with self.assertRaises(KiswahiliError):

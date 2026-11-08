@@ -111,7 +111,8 @@ name), `namba`, `desimali`, `maneno`, `hali`, `orodha`, `kamusi`, `kipeano`
 
 ## Standard library
 
-Load a module with `tumia <jina>`:
+Load a module with `tumia <jina>`, or import a specific file with a quoted
+path (`tumia "zana/zana.kisw" [kama jina]`):
 
 | Module | Purpose |
 |--------|---------|

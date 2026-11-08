@@ -52,6 +52,8 @@ ARGUMENT_STOPS = {"NEWLINE", "SEMI", "RBRACE", "RPAREN", "RBRACKET", "EOF"}
 # operators that build a Compare node rather than an arithmetic Binary node
 COMPARE_OPS = {"EQ", "NEQ", "LT", "LTE", "GT", "GTE"}
 
+MAX_PARSE_DEPTH = 64
+
 
 class Parser:
     def __init__(self, source: str, filename: str = "<kisarifi>"):
@@ -59,6 +61,7 @@ class Parser:
         self.filename = filename
         self.tokens = tokenize(source, filename)
         self.current = 0
+        self.depth = 0
 
     # --- plumbing ----------------------------------------------------------
 
@@ -116,10 +119,20 @@ class Parser:
     # --- statements --------------------------------------------------------
 
     def statement(self) -> ast.Node:
-        line = self.tok.line
-        node = self._statement()
-        node.line = line
-        return node
+        self.depth += 1
+        if self.depth > MAX_PARSE_DEPTH:
+            self.depth -= 1
+            raise self._error(
+                self.tok,
+                f"Msimbo umezama mno (kikomo {MAX_PARSE_DEPTH})",
+                f"Source is nested too deeply (limit {MAX_PARSE_DEPTH})")
+        try:
+            line = self.tok.line
+            node = self._statement()
+            node.line = line
+            return node
+        finally:
+            self.depth -= 1
 
     def _statement(self) -> ast.Node:
         kind = self.tok.type
@@ -240,12 +253,17 @@ class Parser:
 
     def import_statement(self) -> ast.Import:
         self.advance()  # tumia
-        name_token = self.expect("IDENT", "jina la kifurushi")
+        if self.check("STRING"):
+            name_token = self.advance()
+            is_path = True
+        else:
+            name_token = self.expect("IDENT", "jina la kifurushi")
+            is_path = False
         alias = None
         if self.match("IF"):  # `kama` doubles as "as"
             alias = self.expect("IDENT", "jina la kifurushi").value
         self._end_statement()
-        return ast.Import(name_token.value, alias)
+        return ast.Import(name_token.value, alias, is_path)
 
     def typed_declaration(self) -> ast.Declaration:
         hint = TYPE_NAMES[self.advance().type]
@@ -416,7 +434,17 @@ class Parser:
     # --- expressions -------------------------------------------------------
 
     def expression(self) -> ast.Node:
-        return self.assignment()
+        self.depth += 1
+        if self.depth > MAX_PARSE_DEPTH:
+            self.depth -= 1
+            raise self._error(
+                self.tok,
+                f"Msimbo umezama mno (kikomo {MAX_PARSE_DEPTH})",
+                f"Source is nested too deeply (limit {MAX_PARSE_DEPTH})")
+        try:
+            return self.assignment()
+        finally:
+            self.depth -= 1
 
     def assignment(self) -> ast.Node:
         left = self.ternary()
@@ -491,16 +519,26 @@ class Parser:
         return OP_PRECEDENCE.get(op_type)
 
     def unary(self) -> ast.Node:
-        if self.check("MINUS", "PLUS"):
-            op = "-" if self.advance().type == "MINUS" else "+"
-            return ast.Unary(op, self.unary())
-        if self.check("NOT"):
-            self.advance()
-            return ast.Unary("sio", self.unary())
-        if self.check("THROW"):
-            self.advance()
-            return ast.Throw(self.unary())
-        return self.power()
+        self.depth += 1
+        if self.depth > MAX_PARSE_DEPTH:
+            self.depth -= 1
+            raise self._error(
+                self.tok,
+                f"Msimbo umezama mno (kikomo {MAX_PARSE_DEPTH})",
+                f"Source is nested too deeply (limit {MAX_PARSE_DEPTH})")
+        try:
+            if self.check("MINUS", "PLUS"):
+                op = "-" if self.advance().type == "MINUS" else "+"
+                return ast.Unary(op, self.unary())
+            if self.check("NOT"):
+                self.advance()
+                return ast.Unary("sio", self.unary())
+            if self.check("THROW"):
+                self.advance()
+                return ast.Throw(self.unary())
+            return self.power()
+        finally:
+            self.depth -= 1
 
     def power(self) -> ast.Node:
         base = self.postfix()

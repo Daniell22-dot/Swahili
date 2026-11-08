@@ -207,8 +207,10 @@ current default configuration.
 - **Evidence:** recursive-descent parser and recursive expression grammar on
   deeply nested input.
 - **Impact:** `RecursionError` or crash on hostile input.
-- **Mitigation:** explicit nesting-depth limit with a clean bilingual error;
-  increase Python recursion budget only as a stop-gap; fuzz the parser.
+- **Mitigation (now):** explicit nesting-depth limit of 64 in statements,
+  expressions, and unary operators, raising a clean bilingual `Kosa`; fuzz the
+  parser and raise the Python recursion budget only as a stop-gap. **Limit
+  done; fuzzing remains.**
 
 ### T8 — Information disclosure in diagnostics (Low–Medium)
 
@@ -327,7 +329,7 @@ source line containing a secret parsed from the environment. → T8, T2.
 | Module resolution hardening | **present** (built-ins first; CWD not searched; explicit `--path`) |
 | Execution time / step budget | **present** (statement budget `--max-steps`, default 10,000,000; output cap `--max-output`, default 10,000,000; wall-clock timeout pending) |
 | Memory / size limits | **present** (collection/repetition/range/exponent size caps `--max-collection`, default 1,000,000; exponent bounds default; wall-clock timeout pending) |
-| Parser nesting limit | **absent** |
+| Parser nesting limit | **present** (64 levels; clean bilingual error) |
 | Recursion limit (language) | present (200) |
 | No Python `eval`/`exec` of program text | **present** (good) |
 | No `subprocess` / shell execution | **present** (good) |
@@ -355,8 +357,10 @@ Priority order. Each item is a design change, not a patch.
    **Done (warning not yet emitted).**
 5. **Resource budgets.** Step limit, wall-clock timeout, output cap, memory
    cap, and size limits for exponentiation, repetition, ranges, and
-   collections.
+   collections. **Done for steps/output/collections/sizes; wall-clock timeout
+   remains.**
 6. **Parser/lexer robustness.** Explicit nesting depth limit; fuzzing.
+   **Limit done (64); fuzzing remains.**
 7. **Safe file defaults.** Append/no-overwrite by default; confirmation for
    `futa`; optional backup.
 8. **Crypto module.** Add `siri` using `secrets`; mark `kansa` as

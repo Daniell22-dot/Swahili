@@ -284,8 +284,62 @@ class Interpreter:
                 self.execute(node.finally_body, env)
 
     def _exec_import(self, node: ast.Import, env: Environment) -> None:
-        module = self.load_module(node.module, node)
-        env.define(node.alias or node.module, module)
+        if node.is_path:
+            module = self.load_module_path(node.module, node)
+            binding = node.alias or os.path.splitext(
+                os.path.basename(node.module))[0]
+        else:
+            module = self.load_module(node.module, node)
+            binding = node.alias or node.module
+        env.define(binding, module)
+
+    def _fs_allowed(self, path: str) -> bool:
+        if self.allowed_fs is None:
+            return True
+        target = os.path.normcase(os.path.realpath(path))
+        for root in self.allowed_fs:
+            base = os.path.normcase(os.path.realpath(root))
+            if target == base or target.startswith(base + os.sep):
+                return True
+        return False
+
+    def _current_dir(self) -> str:
+        if self.frames:
+            filename = self.frames[-1][0]
+            if filename and not filename.startswith("<"):
+                return os.path.dirname(os.path.abspath(filename))
+        if self.search_paths:
+            return self.search_paths[0]
+        return os.getcwd()
+
+    def load_module_path(self, path: str, node=None) -> KiswahiliModule:
+        base = path
+        if not os.path.isabs(base):
+            root = self._current_dir()
+            base = os.path.join(root, base)
+        full = os.path.abspath(base)
+        if not self._fs_allowed(full):
+            raise self._oops(
+                node,
+                "Faili hii iko nje ya folda zilizoruhusiwa",
+                "This file is outside the allowed folders")
+        if full in self.modules:
+            return self.modules[full]
+        if not os.path.isfile(full):
+            raise self._oops(
+                node, f"Hakuna faili: {path}", f"No such file: {path}")
+        name = os.path.splitext(os.path.basename(full))[0]
+        with open(full, "r", encoding="utf-8") as handle:
+            source = handle.read()
+        module_env = Environment(self.builtin_env)
+        self.search_paths.insert(0, os.path.dirname(full))
+        try:
+            self.run_source(source, full, module_env)
+        finally:
+            self.search_paths.pop(0)
+        module = KiswahiliModule(name, dict(module_env.vars))
+        self.modules[full] = module
+        return module
 
     # --- expressions -------------------------------------------------------
 

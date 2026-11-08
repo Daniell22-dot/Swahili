@@ -261,6 +261,9 @@ andika hesabu.kokotoa(144)      # 12.0
 
 tumia orodha_kazi kama or
 andika or.pangilia([3, 1, 2])   # [1, 2, 3]
+
+tumia "zana/zana.kisw"           # binds `zana`
+tumia "./zana/zana.kisw" kama z  # binds `z`
 ```
 
 Modules are resolved deterministically: built-in modules are considered first,
@@ -268,6 +271,11 @@ then `<jina>.kisw` in the program's own directory, in a `moduli/`
 subdirectory, and in directories added with `--path DIR`. The current working
 directory is never searched implicitly. This prevents a local file from
 shadowing a trusted standard module.
+
+A quoted path imports a file directly. Relative paths resolve against the
+importing file's directory (or the first `--path` root for `-c`/REPL input),
+and a relative alias defaults to the file's basename without `.kisw`. When
+`--allow-fs DIR` is given, path imports are confined to those roots.
 
 ```powershell
 python -m swahili --path ./lib program.kisw
@@ -322,4 +330,6 @@ Capability flags for untrusted code:
 
 Runtime errors are reported in Kiswahili first and English second, with the
 source line and a caret pointing at the relevant position. Recursion is
-limited to 200 nested calls by default.
+limited to 200 nested calls by default. Source nesting (parentheses, unary
+operators, and statements) is limited to 64 levels so hostile input fails with
+a normal `Kosa` instead of exhausting the Python stack.
