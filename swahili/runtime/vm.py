@@ -125,6 +125,8 @@ class VM(Interpreter):
         self.frames.append((code.filename, code.source))
         try:
             self._execute_frame(Frame(code, env or self.globals, [], []))
+        except Rudeia:
+            pass
         finally:
             self.frames.pop()
 
@@ -138,6 +140,8 @@ class VM(Interpreter):
         try:
             self._execute_frame(
                 Frame(artifact.code, env or self.globals, [], []))
+        except Rudeia:
+            pass
         finally:
             self.frames.pop()
 
@@ -226,6 +230,7 @@ class VM(Interpreter):
         stack = frame.stack
         arg = instruction.arg
         arg2 = instruction.arg2
+        arg3 = instruction.arg3
         line = instruction.line
 
         if op == Opcode.NOP:
@@ -442,6 +447,7 @@ class VM(Interpreter):
 
     def _build_dict(self, frame: Frame, count: int, line: int) -> None:
         pairs = [frame.stack.pop() for _ in range(count * 2)]
+        pairs.reverse()
         result: dict[Any, Any] = {}
         try:
             for index in range(0, len(pairs), 2):
@@ -597,9 +603,9 @@ class VM(Interpreter):
         names: tuple[str, ...] = ()
         if kw_names_index is not None:
             names = tuple(frame.code.constants[kw_names_index])
-        kwargs: dict[str, Any] = {}
-        for name in names:
-            kwargs[name] = frame.stack.pop()
+        values = [frame.stack.pop() for _ in names]
+        values.reverse()
+        kwargs: dict[str, Any] = dict(zip(names, values))
         args = [frame.stack.pop() for _ in range(count)]
         args.reverse()
         return args, kwargs

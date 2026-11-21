@@ -48,9 +48,9 @@ class CodeObject:
     first_line: int = 1
 
     def emit(self, op: Opcode, arg: Any = 0, arg2: Any = None,
-             line: int = 0) -> int:
+             arg3: Any = None, line: int = 0) -> int:
         index = len(self.instructions)
-        self.instructions.append(Instruction(op, arg, arg2, line))
+        self.instructions.append(Instruction(op, arg, arg2, arg3, line))
         return index
 
     def patch(self, index: int, **changes: Any) -> None:
