@@ -60,6 +60,7 @@ class Opcode(IntEnum):
     IMPORT_NAME = 65
     RAISE = 66
     DEBUGGER = 67
+    LOAD_CLASS_NAME = 68
 
     SETUP_LOOP = 70
     SETUP_TRY = 71
@@ -75,16 +76,16 @@ NAME_BY_OP = {op.value: op.name for op in Opcode}
 
 OPERAND_CONSTANT_OPS = {
     Opcode.LOAD_CONST, Opcode.LOAD_NAME, Opcode.LOAD_FUNC_REF,
-    Opcode.DEFINE_NAME, Opcode.STORE_NAME, Opcode.BINARY_OP,
+    Opcode.LOAD_CLASS_NAME, Opcode.DEFINE_NAME, Opcode.STORE_NAME, Opcode.BINARY_OP,
     Opcode.COMPARE_OP, Opcode.LOAD_MEMBER, Opcode.STORE_MEMBER,
     Opcode.COERCE, Opcode.MAKE_FUNCTION, Opcode.MAKE_CLASS,
     Opcode.NEW_INSTANCE, Opcode.IMPORT_NAME,
 }
 
 NAME_OPERAND_OPS = {
-    Opcode.LOAD_NAME, Opcode.LOAD_FUNC_REF, Opcode.DEFINE_NAME,
-    Opcode.STORE_NAME, Opcode.LOAD_MEMBER, Opcode.STORE_MEMBER,
-    Opcode.COERCE,
+    Opcode.LOAD_NAME, Opcode.LOAD_FUNC_REF, Opcode.LOAD_CLASS_NAME,
+    Opcode.DEFINE_NAME, Opcode.STORE_NAME, Opcode.LOAD_MEMBER,
+    Opcode.STORE_MEMBER, Opcode.COERCE,
 }
 
 

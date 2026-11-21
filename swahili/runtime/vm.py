@@ -248,8 +248,11 @@ class VM(Interpreter):
         if op == Opcode.LOAD_FALSE:
             stack.append(False)
             return
-        if op in (Opcode.LOAD_NAME, Opcode.LOAD_FUNC_REF):
-            self._load_name(frame, arg, line, op == Opcode.LOAD_FUNC_REF)
+        if op in (Opcode.LOAD_NAME, Opcode.LOAD_FUNC_REF,
+                  Opcode.LOAD_CLASS_NAME):
+            kind = ("function" if op == Opcode.LOAD_FUNC_REF else
+                    "class" if op == Opcode.LOAD_CLASS_NAME else "name")
+            self._load_name(frame, arg, line, kind)
             return
         if op == Opcode.DEFINE_NAME:
             frame.scope.define(frame.code.constants[arg], stack.pop())
@@ -429,19 +432,22 @@ class VM(Interpreter):
     # --- individual operations --------------------------------------------
 
     def _load_name(self, frame: Frame, name_index: int, line: int,
-                   want_function: bool = False) -> None:
+                   kind: str = "name") -> None:
         name = frame.code.constants[name_index]
         try:
             value = frame.scope.get(name)
         except KeyError:
             close = _closest(name, frame.scope.all_names())
-            if want_function:
+            suggestion = f"Ulikuwa unaima '{close}'?" if close else ""
+            if kind == "function":
                 raise self._oops_line(
                     line, f"Hamna kazi ya '{name}'",
-                    f"No such function: '{name}'",
-                    f"Ulikuwa unaima '{close}'?" if close else "")
-            hint = (f"Ulikuwa unaima '{close}'?" if close else
-                    "Je, umeandika jina hili mwanzo?")
+                    f"No such function: '{name}'", suggestion)
+            if kind == "class":
+                raise self._oops_line(
+                    line, f"Hamna darasa jina la '{name}'",
+                    f"No class named '{name}'", suggestion)
+            hint = suggestion or "Je, umeandika jina hili mwanzo?"
             raise self._oops_line(line, f"Hamna jina la '{name}'",
                                   f"No such name: '{name}'", hint) from None
         frame.stack.append(value)

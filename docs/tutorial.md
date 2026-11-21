@@ -7,6 +7,10 @@ A hands-on introduction to Kiswahili. Run each snippet by saving it to a
 python -m swahili file.kisw
 ```
 
+The same program can run on the bytecode VM with
+`python -m swahili --engine vm file.kisw`, or be compiled with
+`python -m swahili --compile file.kisw`.
+
 or use the REPL:
 
 ```powershell

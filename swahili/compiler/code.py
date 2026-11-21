@@ -265,6 +265,8 @@ def disassemble(code: CodeObject, out: TextIO | None = None) -> str:
             parts.append(text)
         if instruction.arg2 is not None:
             parts.append(_operand_text(code, op, instruction.arg2))
+        if instruction.arg3 is not None:
+            parts.append(_operand_text(code, op, instruction.arg3))
         write(f"{index:>5}  {instruction.line:>4}  {' '.join(parts)}\n")
 
     for constant in code.constants:

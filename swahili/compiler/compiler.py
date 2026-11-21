@@ -221,7 +221,7 @@ class Compiler:
             parent=node.parent,
         )
         if node.parent:
-            self._emit(Opcode.LOAD_NAME, self._str(node.parent), node=node)
+            self._emit(Opcode.LOAD_CLASS_NAME, self._str(node.parent), node=node)
         else:
             self._emit(Opcode.LOAD_NONE, node=node)
         self._emit(Opcode.MAKE_CLASS, self._const(spec), node=node)
@@ -411,7 +411,7 @@ class Compiler:
         self._emit(Opcode.CALL_FUNCTION, count, kw_names, node=node)
 
     def _expr_New(self, node: ast.New) -> None:
-        self._emit(Opcode.LOAD_NAME, self._str(node.class_name), node=node)
+        self._emit(Opcode.LOAD_CLASS_NAME, self._str(node.class_name), node=node)
         count, kw_names = self._call_operands(node)
         self._emit(Opcode.NEW_INSTANCE, count, kw_names,
                    self._str(node.class_name), node=node)
