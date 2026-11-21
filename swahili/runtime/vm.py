@@ -560,9 +560,9 @@ class VM(Interpreter):
         frame.stack.append(result)
 
     def _store_subscript(self, frame: Frame, line: int) -> None:
-        value = frame.stack.pop()
         key = frame.stack.pop()
         holder = frame.stack.pop()
+        value = frame.stack.pop()
         try:
             if isinstance(holder, dict):
                 holder[key] = value
@@ -587,8 +587,8 @@ class VM(Interpreter):
             raise self._oops_line(line, str(exc), str(exc)) from None
 
     def _store_member(self, frame: Frame, name: str, line: int) -> None:
-        value = frame.stack.pop()
         holder = frame.stack.pop()
+        value = frame.stack.pop()
         if isinstance(holder, SwahiliInstance):
             holder.fields[name] = value
             return
@@ -718,6 +718,8 @@ class VM(Interpreter):
                 f"Kazi '{fn.name}' haijui vigezo: {extra}",
                 f"'{fn.name}' got unexpected argument(s): {extra}")
 
+        if self_instance is not None:
+            local.define("mwenyewe", self_instance)
         if self_instance is not None and owner is not None \
                 and owner.parent is not None:
             local.define("mzazi", SuperProxy(self_instance, owner.parent))
