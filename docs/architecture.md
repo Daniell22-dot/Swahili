@@ -84,8 +84,13 @@ flowchart TD
   class body, default expression, and module.
 - The VM has an explicit value stack, call frames, and a block stack for loops,
   `jaribu/kosa/mwisho`, `rudia`, `vunja`, and `endelea`.
-- `.kiswc` artifacts are JSON with a magic header and version, and carry the
-  original source text so compiled programs still produce caret diagnostics.
+- `.kiswc` artifacts are zlib-compressed JSON in a small binary envelope with a
+  magic header and version. They carry the original source text and its SHA-256
+  hash, so compiled programs still produce caret diagnostics and stale/corrupt
+  artifacts are rejected or recompiled. Version 1 text artifacts are migrated
+  on load.
+- Imported modules are compiled once to sibling `.kiswc` caches by the VM; the
+  cache is used only while the source hash matches.
 - Both engines share `values.py`, the builtins, modules, resource budgets, and
   sandbox rules. The reference interpreter is kept as the semantic oracle.
 
