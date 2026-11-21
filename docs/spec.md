@@ -1,12 +1,15 @@
 # Kiswahili — Language Reference
 
 This document describes the syntax and semantics of the Kiswahili language as
-implemented in v0.1. Kiswahili is dynamically typed and executed by a
-tree-walking interpreter.
+implemented in v0.1. Kiswahili is dynamically typed. Programs may be executed
+by the tree-walking reference interpreter or compiled to bytecode and run on
+the virtual machine; both engines implement the semantics below.
 
 ## 1. Source files
 
 - Program files use the extension `.kisw` and are UTF-8 text.
+- `python -m swahili --compile file.kisw` writes a versioned `.kiswc` bytecode
+  artifact. Run it with `--run-bytecode` and inspect it with `--disassemble`.
 - Statements are separated by newlines or `;`.
 - A newline does **not** end a statement when it follows an operator, a comma,
   a dot, an opening bracket, or a block keyword. This allows expressions to

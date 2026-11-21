@@ -9,6 +9,8 @@ Modules you pull in with `tumia`:
     tumia wakati        time and dates
     tumia mfumo         system / environment
     tumia faili         file reading and writing
+    tumia umbizo        JSON formatting
+    tumia seva          HTTP server (network capability)
 
 Each factory returns `{name: value}` for a `KiswahiliModule`.
 """
@@ -242,6 +244,57 @@ def _faili(interp) -> dict:
     }
 
 
+def _umbizo(interp) -> dict:
+    import json as _json
+
+    def _kwa_json(value):
+        try:
+            return _json.dumps(value, ensure_ascii=False)
+        except (TypeError, ValueError) as exc:
+            raise RuntimeErr(
+                f"Haiwezi kuumbizwa kuwa JSON: {exc}",
+                f"Cannot encode as JSON: {exc}") from None
+
+    def _kutoka_json(text):
+        try:
+            return _json.loads(text)
+        except (TypeError, ValueError) as exc:
+            raise RuntimeErr(
+                f"Maandishi si JSON sahihi: {exc}",
+                f"Invalid JSON: {exc}") from None
+
+    return {
+        "kwa_json": NativeFunction("kwa_json", _kwa_json),
+        "kutoka_json": NativeFunction("kutoka_json", _kutoka_json),
+    }
+
+
+def _seva(interp) -> dict:
+    from ..server import (DEFAULT_HOST, DEFAULT_PORT, ServerApp, jibu,
+                          json_response, serve)
+
+    app = getattr(interp, "server_app", None)
+    if app is None:
+        app = ServerApp(interp)
+        interp.server_app = app
+
+    def _njia(mbinu, njia, kazi):
+        app.add_route(mbinu, njia, kazi)
+
+    def _anza(mlango=DEFAULT_PORT, mwenyeji=DEFAULT_HOST):
+        app.port = int(mlango)
+        app.host = str(mwenyeji)
+        serve(app)
+
+    return {
+        "njia": NativeFunction("njia", _njia),
+        "anza": NativeFunction("anza", _anza),
+        "jibu": NativeFunction("jibu", jibu),
+        "json": NativeFunction("json", json_response),
+        "mwenyeji": NativeFunction("mwenyeji", lambda: app.host),
+    }
+
+
 MODULES = {
     "hesabu": _hesabu,
     "orodha_kazi": _orodha_kazi,
@@ -251,4 +304,6 @@ MODULES = {
     "wakati": _wakati,
     "mfumo": _mfumo,
     "faili": _faili,
+    "umbizo": _umbizo,
+    "seva": _seva,
 }

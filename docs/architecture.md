@@ -1,7 +1,9 @@
 # Architecture
 
-Kiswahili is a classic tree-walking interpreter. Source text flows through
-four stages, and the package is organised to match them.
+Kiswahili has one frontend and two execution engines. Source text flows
+through the lexer and parser into an AST. From there it can be evaluated
+directly by the tree-walking reference interpreter, or lowered to bytecode and
+executed by the virtual machine.
 
 ```mermaid
 flowchart TD
@@ -15,10 +17,11 @@ flowchart TD
         lex --> tok --> par --> ast
     end
 
-    subgraph runtime["runtime/ — evaluate the tree"]
-        interp["interpreter.py<br/>evaluate / execute"]
-        vals["values.py<br/>Environment, values, classes"]
-    end
+    interp["runtime/interpreter.py<br/>tree-walking evaluator"]
+    compiler["compiler/compiler.py<br/>AST -> bytecode"]
+    artifact[".kiswc artifact<br/>compiler/code.py"]
+    vm["runtime/vm.py<br/>bytecode VM"]
+    vals["runtime/values.py<br/>Environment, values, classes"]
 
     subgraph library["library/ — standard library"]
         bi["builtins.py<br/>andika, idadi, ..."]
@@ -29,12 +32,17 @@ flowchart TD
 
     src --> lex
     ast --> interp
+    ast --> compiler --> artifact --> vm
     interp --> vals
+    vm --> vals
     interp --> bi
+    vm --> bi
     interp --> mods
+    vm --> mods
     bi --> vals
     mods --> vals
     interp --> out
+    vm --> out
 ```
 
 ## Folder map
@@ -42,22 +50,44 @@ flowchart TD
 | Folder / file | Responsibility |
 |---------------|----------------|
 | `swahili/frontend/` | turn text into an AST; no execution |
-| `swahili/frontend/lexer.py` | characters → tokens, strings, f-strings, indentation-free newlines |
+| `swahili/frontend/lexer.py` | characters → tokens, strings, f-strings, newline rules |
 | `swahili/frontend/parser.py` | tokens → AST; statements, expressions, precedence |
 | `swahili/frontend/ast.py` | dataclass definitions for every syntax node |
+| `swahili/compiler/` | lower an AST to bytecode and serialize artifacts |
+| `swahili/compiler/opcode.py` | instruction set and operand metadata |
+| `swahili/compiler/code.py` | `CodeObject`, `Artifact`, function/class specs, disassembler |
+| `swahili/compiler/compiler.py` | AST → code objects, including nested scopes |
 | `swahili/runtime/` | everything about running a program |
 | `swahili/runtime/values.py` | `Environment`, functions, classes, instances, modules, formatting |
-| `swahili/runtime/interpreter.py` | the evaluator; dispatch tables; scopes; calls |
+| `swahili/runtime/interpreter.py` | tree-walking reference evaluator |
+| `swahili/runtime/vm.py` | stack-based bytecode VM with call frames and block stack |
+| `swahili/runtime/semantics.py` | coercion/comparison rules shared with the VM |
 | `swahili/library/` | the standard library |
 | `swahili/library/builtins.py` | globals (`andika`, `idadi`, …) and value methods |
 | `swahili/library/modules.py` | importable modules (`hesabu`, `faili`, …) |
 | `swahili/errors.py` | bilingual error types and rendering |
-| `swahili/cli.py` | argument parsing, file runner, REPL |
-| `swahili/__init__.py` | public API: `Interpreter`, `parse`, `tokenize`, errors |
+| `swahili/cli.py` | argument parsing, file runner, compiler flags, REPL |
+| `swahili/__init__.py` | public API: `Interpreter`, `VM`, `compile_source`, `Artifact` |
 | `examples/` | runnable sample programs |
-| `tests/` | `unittest` suite |
+| `tests/` | `unittest` suite, including interpreter/VM parity tests |
 | `docs/` | language reference, tutorial, security |
 | `docs/security/` | threat model and sandbox guidance |
+
+## Bytecode model
+
+- Instructions are small: `LOAD_CONST`, `LOAD_NAME`, `BINARY_OP`, `CALL_FUNCTION`,
+  jumps, `SETUP_LOOP`, `SETUP_TRY`, and so on. Each instruction has a line
+  number for diagnostics.
+- Constants, including nested `FunctionSpec` and `ClassSpec` values, live in a
+  code object's constant table.
+- The compiler recursively emits a separate code object per function, lambda,
+  class body, default expression, and module.
+- The VM has an explicit value stack, call frames, and a block stack for loops,
+  `jaribu/kosa/mwisho`, `rudia`, `vunja`, and `endelea`.
+- `.kiswc` artifacts are JSON with a magic header and version, and carry the
+  original source text so compiled programs still produce caret diagnostics.
+- Both engines share `values.py`, the builtins, modules, resource budgets, and
+  sandbox rules. The reference interpreter is kept as the semantic oracle.
 
 ## Dependency direction
 
@@ -66,30 +96,32 @@ Dependencies point **inward and downward**:
 ```mermaid
 flowchart LR
     cli["cli.py"] --> runtime["runtime/"]
-    runtime --> frontend["frontend/"]
+    cli --> compiler["compiler/"]
+    compiler --> frontend["frontend/"]
+    runtime --> frontend
     runtime --> errors["errors.py"]
     runtime --> library["library/"]
     library --> values["runtime/values.py"]
     frontend --> errors
 ```
 
-`runtime/interpreter.py` imports `library/`, and `library/` imports
-`runtime/values.py`. The only shared link is `values.py`, so there is no
-import cycle at module level.
-
 Rules of thumb:
 
-- `frontend` never imports `runtime` or `library`.
+- `frontend` never imports `runtime`, `compiler`, or `library`.
+- `compiler` depends only on `frontend` and its own code/artifact types.
 - `library` depends on `runtime` values, never on `cli`.
-- `runtime/interpreter.py` is the only place that wires frontend, library, and
-  values together.
-- `errors.py` is shared and imports nothing from the package.
+- Both `runtime/interpreter.py` and `runtime/vm.py` wire frontend, library,
+  and values together. The VM additionally imports `compiler/` code objects.
+- `errors.py` imports nothing from the package.
 
 ## Adding a feature
 
 - **New syntax:** add a node in `frontend/ast.py`, parse it in
-  `frontend/parser.py`, evaluate/execute it in `runtime/interpreter.py`, and
-  add tests.
+  `frontend/parser.py`, evaluate it in `runtime/interpreter.py`, compile it in
+  `compiler/compiler.py`, execute it in `runtime/vm.py`, and add a parity test.
+- **New opcode:** add it to `compiler/opcode.py`, emit it in
+  `compiler/compiler.py`, handle it in `runtime/vm.py`, and extend the
+  disassembler where useful.
 - **New built-in function:** add it in `library/builtins.py` and register it in
   `install()`.
 - **New importable module:** add a factory in `library/modules.py` and list it
@@ -102,6 +134,6 @@ Rules of thumb:
 - Every scope is an `Environment` with a parent link.
 - User functions capture their defining `Environment`, which gives closures.
 - Classes collect methods in a private `Environment`; instances carry fields.
-- The interpreter has a `MAX_DEPTH` guard (200) shared across calls.
+- Both engines enforce `MAX_DEPTH` (200) across calls.
 - Errors are Python exceptions carrying bilingual messages; the CLI renders
   them with the source line and a caret.

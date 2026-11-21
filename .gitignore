@@ -23,3 +23,4 @@ Thumbs.db
 # Kiswahili output
 *.out
 *.pyc
+*.kiswc

@@ -78,17 +78,22 @@ class Interpreter:
                 denied.add("mfumo")
             if self.allowed_fs is None:
                 denied.add("faili")
+            denied.add("seva")
         self.denied_modules = denied
+        self.server_app = None
 
     # --- public entry points ----------------------------------------------
+
+    def reset_budgets(self) -> None:
+        self.steps = 0
+        self.output_chars = 0
+        self.started = time.monotonic()
 
     def run_source(self, source: str, filename: str = "<kisarifi>",
                    env: Environment | None = None) -> None:
         program = parse(source, filename)
         if not self.frames:
-            self.steps = 0
-            self.output_chars = 0
-            self.started = time.monotonic()
+            self.reset_budgets()
         self.frames.append((filename, source))
         try:
             self.execute(program, env or self.globals)

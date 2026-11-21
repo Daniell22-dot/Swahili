@@ -12,8 +12,11 @@ import argparse
 import os
 import sys
 
+from .compiler.code import (VERSION as BYTECODE_VERSION, Artifact,
+                            disassemble, output_path_for)
+from .compiler.compiler import compile_source
 from .errors import KiswahiliError, Kosa, TupaImbali
-from .runtime import Environment, Interpreter, display
+from .runtime import Environment, Interpreter, VM, display
 
 VERSION = "0.1.0"
 EXTENSION = ".kisw"
@@ -55,6 +58,17 @@ def main(argv: list[str] | None = None) -> int:
                         help="start the interactive REPL")
     parser.add_argument("-v", "--version", action="version",
                         version=f"swahili {VERSION}")
+    parser.add_argument("--engine", choices=("interpreter", "vm"),
+                        default="interpreter",
+                        help="execution engine (default: interpreter)")
+    parser.add_argument("--compile", action="store_true",
+                        help="compile the program to a .kiswc artifact")
+    parser.add_argument("-o", "--out", metavar="FILE",
+                        help="output path for --compile")
+    parser.add_argument("--run-bytecode", metavar="FILE",
+                        help="run a compiled .kiswc artifact")
+    parser.add_argument("--disassemble", metavar="FILE",
+                        help="print the instructions in a .kiswc artifact")
     parser.add_argument("--sandbox", action="store_true",
                         help="block host-access modules (faili, mfumo)")
     parser.add_argument("--allow-fs", action="append", metavar="DIR",
@@ -91,13 +105,53 @@ def main(argv: list[str] | None = None) -> int:
     if args.max_seconds is not None:
         limits["max_seconds"] = args.max_seconds
 
-    interpreter = Interpreter(repl_hook=None, search_paths=search_paths,
-                              sandbox=args.sandbox, allowed_fs=args.allow_fs,
-                              allowed_env=args.allow_env,
-                              **limits)
-    interpreter.repl_hook = lambda env: repl_loop(interpreter, env, quiet=True)
+    def make_engine(engine_cls, paths: list[str] | None = None):
+        engine = engine_cls(repl_hook=None,
+                            search_paths=paths if paths is not None
+                            else search_paths,
+                            sandbox=args.sandbox, allowed_fs=args.allow_fs,
+                            allowed_env=args.allow_env, **limits)
+        engine.repl_hook = lambda env: repl_loop(engine, env, quiet=True)
+        return engine
 
     try:
+        if args.disassemble:
+            artifact = Artifact.load(args.disassemble)
+            sys.stdout.write(disassemble(artifact.code))
+            return 0
+
+        if args.run_bytecode:
+            artifact = Artifact.load(args.run_bytecode)
+            artifact_paths = list(args.path)
+            if artifact.filename and not artifact.filename.startswith("<"):
+                artifact_paths.insert(
+                    0, os.path.dirname(os.path.abspath(artifact.filename)))
+            engine = make_engine(VM, artifact_paths)
+            engine.run_artifact(artifact)
+            return 0
+
+        if args.compile:
+            if args.code:
+                source = args.code
+                filename = "<kando>"
+                out = args.out or "programu.kiswc"
+            elif args.faili:
+                with open(args.faili, "r", encoding="utf-8") as handle:
+                    source = handle.read()
+                filename = os.path.abspath(args.faili)
+                out = output_path_for(args.faili, args.out)
+            else:
+                sys.stderr.write("Andika programu au taja faili. / "
+                                 "Give code or a file to compile.\n")
+                return 1
+            artifact = Artifact(BYTECODE_VERSION, filename, source,
+                                compile_source(source, filename))
+            artifact.save(out)
+            sys.stdout.write(f"{out}\n")
+            return 0
+
+        engine_cls = VM if args.engine == "vm" else Interpreter
+        interpreter = make_engine(engine_cls)
         if args.code:
             interpreter.run_source(args.code, "<kando>")
             return 0
@@ -209,6 +263,15 @@ def _balanced(source: str) -> bool:
         elif ch in ")]}":
             depth -= 1
     return depth <= 0 and not in_string
+
+
+def compile_main(argv: list[str] | None = None) -> int:
+    """Console-script shortcut for `swahili --compile`."""
+
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if "--compile" not in arguments:
+        arguments.insert(0, "--compile")
+    return main(arguments)
 
 
 if __name__ == "__main__":
