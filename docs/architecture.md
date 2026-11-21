@@ -76,8 +76,8 @@ flowchart TD
 ## Bytecode model
 
 - Instructions are small: `LOAD_CONST`, `LOAD_NAME`, `BINARY_OP`, `CALL_FUNCTION`,
-  jumps, `SETUP_LOOP`, `SETUP_TRY`, and so on. Each instruction has a line
-  number for diagnostics.
+  jumps, `SETUP_LOOP`, `SETUP_TRY`, and so on. Each instruction carries the
+  line, column and source index of the AST node that produced it.
 - Constants, including nested `FunctionSpec` and `ClassSpec` values, live in a
   code object's constant table.
 - The compiler recursively emits a separate code object per function, lambda,
