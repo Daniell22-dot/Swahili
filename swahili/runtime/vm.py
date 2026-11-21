@@ -461,7 +461,6 @@ class VM(Interpreter):
             raise self._oops_line(line, f"Kipeano siyo sahihi: {exc}",
                                   f"Invalid range: {exc}") from None
         if self.max_collection is not None and len(result) > self.max_collection:
-            sw, en = too_large_message(len(result), self.max_collection)
             raise self._oops_line(line,
                                   f"Kipeano ni kikubwa mno "
                                   f"({len(result)} > {self.max_collection})",
