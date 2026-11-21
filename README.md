@@ -26,6 +26,9 @@ python -m swahili --compile examples/karibu.kisw
 python -m swahili --run-bytecode examples/karibu.kiswc
 python -m swahili --disassemble examples/karibu.kiswc
 
+# the VM caches imported modules as .kiswc files; disable with --no-bytecode-cache
+python -m swahili --engine vm --no-bytecode-cache examples/karibu.kisw
+
 # run one line / start the interactive REPL
 python -m swahili -c 'andika "Habari"'
 python -m swahili

@@ -10,6 +10,12 @@ the virtual machine; both engines implement the semantics below.
 - Program files use the extension `.kisw` and are UTF-8 text.
 - `python -m swahili --compile file.kisw` writes a versioned `.kiswc` bytecode
   artifact. Run it with `--run-bytecode` and inspect it with `--disassemble`.
+  Artifacts are compressed binary envelopes around JSON, include a SHA-256 hash
+  of the source text, and are validated on load. Version 1 text artifacts can
+  still be read and are upgraded to version 2.
+- On the VM, imported `.kisw` modules get a sibling `.kiswc` cache. The cache is
+  reused only when the source hash still matches; stale or corrupt caches are
+  recompiled automatically. Pass `--no-bytecode-cache` to disable this.
 - Statements are separated by newlines or `;`.
 - A newline does **not** end a statement when it follows an operator, a comma,
   a dot, an opening bracket, or a block keyword. This allows expressions to
