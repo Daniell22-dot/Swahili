@@ -7,14 +7,38 @@ the Kiswahili lives in the keywords (`lexer.KEYWORDS`) and the diagnostics.
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
+
+_POSITION: ContextVar[tuple[int, int, int]] = ContextVar(
+    "kiswahili_ast_position", default=(0, 0, 0))
+
+
+def push_position(token: Any = None, line: int = 0, column: int = 0,
+                  index: int = 0):
+    """Remember where nodes built in this scope started in the source."""
+    if token is not None:
+        line, column, index = token.line, token.column, token.index
+    return _POSITION.set((line, column, index))
+
+
+def pop_position(marker: Any) -> None:
+    _POSITION.reset(marker)
 
 
 class Node:
     """Marker base so visitors can type-check cheaply."""
 
     __slots__ = ()
+
+    def __new__(cls, *args: Any, **kwargs: Any) -> "Node":
+        node = super().__new__(cls)
+        line, column, index = _POSITION.get()
+        object.__setattr__(node, "line", line)
+        object.__setattr__(node, "column", column)
+        object.__setattr__(node, "index", index)
+        return node
 
 
 # --- expressions ------------------------------------------------------------

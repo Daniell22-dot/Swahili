@@ -9,7 +9,8 @@ python -m swahili file.kisw
 
 The same program can run on the bytecode VM with
 `python -m swahili --engine vm file.kisw`, or be compiled with
-`python -m swahili --compile file.kisw`.
+`python -m swahili --compile file.kisw`. The VM caches imported modules as
+`.kiswc` files; use `--no-bytecode-cache` if you would rather not write them.
 
 or use the REPL:
 

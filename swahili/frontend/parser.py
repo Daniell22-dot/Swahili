@@ -748,3 +748,28 @@ class Parser:
 
 def parse(source: str, filename: str = "<kisarifi>") -> ast.Program:
     return Parser(source, filename).parse()
+
+
+def _stamp_node_positions(method):
+    """Stamp every AST node with the token that began its production."""
+
+    def wrapped(self, *args, **kwargs):
+        marker = ast.push_position(self.tok)
+        try:
+            return method(self, *args, **kwargs)
+        finally:
+            ast.pop_position(marker)
+
+    return wrapped
+
+
+for _NAME in (
+    "parse", "statement", "_statement", "import_statement",
+    "typed_declaration", "expression_statement", "if_statement",
+    "while_statement", "for_statement", "try_statement", "block",
+    "class_statement", "function_statement", "parameter_list", "expression",
+    "assignment", "ternary", "ternary_expression", "expression_block",
+    "binary", "unary", "power", "postfix", "call", "primary",
+    "list_literal", "dict_literal",
+):
+    setattr(Parser, _NAME, _stamp_node_positions(getattr(Parser, _NAME)))

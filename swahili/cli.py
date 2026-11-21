@@ -69,6 +69,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="run a compiled .kiswc artifact")
     parser.add_argument("--disassemble", metavar="FILE",
                         help="print the instructions in a .kiswc artifact")
+    parser.add_argument("--no-bytecode-cache", dest="bytecode_cache",
+                        action="store_false", default=True,
+                        help="do not create or use cached .kiswc module artifacts")
     parser.add_argument("--sandbox", action="store_true",
                         help="block host-access modules (faili, mfumo)")
     parser.add_argument("--allow-fs", action="append", metavar="DIR",
@@ -106,11 +109,14 @@ def main(argv: list[str] | None = None) -> int:
         limits["max_seconds"] = args.max_seconds
 
     def make_engine(engine_cls, paths: list[str] | None = None):
+        options = dict(limits)
+        if engine_cls is VM:
+            options["bytecode_cache"] = args.bytecode_cache
         engine = engine_cls(repl_hook=None,
                             search_paths=paths if paths is not None
                             else search_paths,
                             sandbox=args.sandbox, allowed_fs=args.allow_fs,
-                            allowed_env=args.allow_env, **limits)
+                            allowed_env=args.allow_env, **options)
         engine.repl_hook = lambda env: repl_loop(engine, env, quiet=True)
         return engine
 
