@@ -117,7 +117,8 @@ tumia hesabu
 andika hesabu.kokotoa(144)
 andika hesabu.jumla([1, 2, 3, 4])
 tumia umbizo
-andika umbizo.simbua("{\"jina\": \"Amina\"}").jina
+data = umbizo.kutoka_json("{\"jina\": \"Amina\"}")
+andika data["jina"]
 """,
 }
 
