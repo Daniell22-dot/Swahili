@@ -1,8 +1,9 @@
 # Kiswahili
 
 **Kiswahili** is a general-purpose programming language whose syntax is
-Kiswahili (Swahili). It has a hand-written lexer, a Pratt parser, a
-tree-walking interpreter, a standard library, and an interactive REPL — all
+Kiswahili (Swahili). It has a hand-written lexer, a Pratt parser, **two
+execution engines** (a tree-walking reference interpreter and a bytecode
+compiler + virtual machine), a standard library, and an interactive REPL — all
 written in dependency-free Python.
 
 ```
@@ -14,13 +15,19 @@ andika "Habari yako, Dunia!"
 Requirements: Python 3.10 or newer. No third-party packages.
 
 ```powershell
-# run a program
+# run a program with the reference interpreter
 python -m swahili examples/karibu.kisw
 
-# run one line
-python -m swahili -c 'andika "Habari"'
+# run the same program on the bytecode VM
+python -m swahili --engine vm examples/karibu.kisw
 
-# start the interactive REPL
+# compile to a .kiswc artifact, then run or inspect it
+python -m swahili --compile examples/karibu.kisw
+python -m swahili --run-bytecode examples/karibu.kiswc
+python -m swahili --disassemble examples/karibu.kiswc
+
+# run one line / start the interactive REPL
+python -m swahili -c 'andika "Habari"'
 python -m swahili
 ```
 
@@ -138,14 +145,20 @@ tuned with `--max-steps`, `--max-collection`, and `--max-output`. Add
 ## Project layout
 
 ```
-swahili/            the interpreter package
+swahili/            the language package
   frontend/         source code -> syntax tree
     lexer.py        source text -> tokens
     parser.py       tokens -> AST (Pratt parser)
     ast.py          AST node definitions
-  runtime/          evaluating the tree
+  compiler/         syntax tree -> bytecode artifacts
+    opcode.py       instruction set
+    code.py         code objects, artifacts, disassembler
+    compiler.py     AST -> bytecode lowering
+  runtime/          executing programs
     values.py       values, environments, classes
-    interpreter.py  tree-walking evaluator
+    interpreter.py  tree-walking reference evaluator
+    vm.py           bytecode virtual machine
+    semantics.py    shared coercion / comparison rules
   library/          the standard library
     builtins.py     global built-ins and value methods
     modules.py      importable modules (`tumia`)
@@ -170,7 +183,7 @@ python -m unittest discover -s tests
 
 - [`docs/tutorial.md`](docs/tutorial.md) — step-by-step introduction
 - [`docs/spec.md`](docs/spec.md) — language reference
-- [`docs/architecture.md`](docs/architecture.md) — how the interpreter is built
+- [`docs/architecture.md`](docs/architecture.md) — interpreter, compiler, and VM design
 - [`docs/security/threat-model.md`](docs/security/threat-model.md) — threats and hardening
 - [`docs/security/sandbox.md`](docs/security/sandbox.md) — running untrusted code
 - [`SECURITY.md`](SECURITY.md) — security policy
