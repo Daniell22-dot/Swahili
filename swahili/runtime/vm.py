@@ -183,13 +183,14 @@ class VM(Interpreter):
             block = frame.blocks[-1]
             del frame.stack[block.stack_depth:]
             if block.kind == "loop":
-                frame.blocks.pop()
                 if isinstance(exc, Vunja):
+                    frame.blocks.pop()
                     frame.ip = block.target
                     return True
                 if isinstance(exc, Endelea):
                     frame.ip = block.target2
                     return True
+                frame.blocks.pop()
                 continue
             if block.kind == "finally_cleanup":
                 frame.blocks.pop()
@@ -595,6 +596,15 @@ class VM(Interpreter):
         raise self._oops_line(
             line, f"{type_name(holder)} haina sehemu '{name}'",
             f"{type_name(holder)} has no property '{name}'")
+
+    def get_member(self, node, holder: Any, name: str) -> Any:
+        result = super().get_member(node, holder, name)
+        if (isinstance(result, BoundMethod)
+                and not isinstance(result, CompiledBoundMethod)
+                and isinstance(result.function, CompiledFunction)):
+            return CompiledBoundMethod(result.function, result.instance,
+                                       result.owner)
+        return result
 
     # --- calls, functions and classes -------------------------------------
 
