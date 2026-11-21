@@ -8,16 +8,25 @@ running a compiled artifact later.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import struct
+import zlib
 from dataclasses import dataclass, field
 from typing import Any, TextIO
 
 from .opcode import Opcode, opcode_name
 
 MAGIC = "KISWILI-BYTECODE"
-VERSION = 1
+BINARY_MAGIC = b"KSBC"
+BINARY_HEADER = struct.Struct(">4sII")
+VERSION = 2
 EXTENSION = ".kiswc"
+
+
+def hash_source(source: str) -> str:
+    return hashlib.sha256(source.encode("utf-8")).hexdigest()
 
 
 @dataclass
@@ -27,15 +36,21 @@ class Instruction:
     arg2: Any = None
     arg3: Any = None
     line: int = 0
+    column: int = 0
+    index: int = 0
 
     def to_json(self) -> list[Any]:
-        return [int(self.op), self.arg, self.arg2, self.arg3, self.line]
+        return [int(self.op), self.arg, self.arg2, self.arg3, self.line,
+                self.column, self.index]
 
     @classmethod
     def from_json(cls, data: list[Any]) -> "Instruction":
         if len(data) == 4:
             return cls(Opcode(data[0]), data[1], data[2], None, data[3])
-        return cls(Opcode(data[0]), data[1], data[2], data[3], data[4])
+        if len(data) == 5:
+            return cls(Opcode(data[0]), data[1], data[2], data[3], data[4])
+        return cls(Opcode(data[0]), data[1], data[2], data[3], data[4],
+                   data[5], data[6])
 
 
 @dataclass
@@ -48,10 +63,12 @@ class CodeObject:
     first_line: int = 1
 
     def emit(self, op: Opcode, arg: Any = 0, arg2: Any = None,
-             arg3: Any = None, line: int = 0) -> int:
-        index = len(self.instructions)
-        self.instructions.append(Instruction(op, arg, arg2, arg3, line))
-        return index
+             arg3: Any = None, line: int = 0, column: int = 0,
+             index: int = 0) -> int:
+        at = len(self.instructions)
+        self.instructions.append(
+            Instruction(op, arg, arg2, arg3, line, column, index))
+        return at
 
     def patch(self, index: int, **changes: Any) -> None:
         instruction = self.instructions[index]
@@ -94,6 +111,7 @@ class Artifact:
     filename: str
     source: str
     code: CodeObject
+    source_hash: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -101,6 +119,7 @@ class Artifact:
             "version": VERSION,
             "filename": self.filename,
             "source": self.source,
+            "source_hash": self.source_hash or hash_source(self.source),
             "code": _code_to_json(self.code),
         }
 
@@ -108,6 +127,13 @@ class Artifact:
         return json.dumps(self.to_dict(), ensure_ascii=False)
 
     def save(self, path: str) -> None:
+        payload = zlib.compress(self.to_json().encode("utf-8"), 9)
+        header = BINARY_HEADER.pack(BINARY_MAGIC, VERSION, len(payload))
+        with open(path, "wb") as handle:
+            handle.write(header)
+            handle.write(payload)
+
+    def save_json(self, path: str) -> None:
         with open(path, "w", encoding="utf-8") as handle:
             handle.write(self.to_json())
             handle.write("\n")
@@ -117,21 +143,47 @@ class Artifact:
         if data.get("magic") != MAGIC:
             raise ValueError("Hii si faili ya bytecode ya Kiswahili / "
                              "Not a Kiswahili bytecode file")
-        version = data.get("version")
-        if version != VERSION:
+        version = int(data.get("version", 0))
+        if version not in (1, VERSION):
             raise ValueError(f"Toleo la bytecode halijulikani: {version} / "
                              f"Unknown bytecode version: {version}")
-        return cls(int(version), data["filename"], data["source"],
-                   _code_from_json(data["code"]))
+        source = data["source"]
+        expected = data.get("source_hash") or hash_source(source)
+        if expected != hash_source(source):
+            raise ValueError("Chanzo cha bytecode kimebadilika / "
+                             "Bytecode source hash mismatch")
+        return cls(VERSION, data["filename"], source,
+                   _code_from_json(data["code"]), expected)
 
     @classmethod
     def from_json(cls, text: str) -> "Artifact":
         return cls.from_dict(json.loads(text))
 
     @classmethod
+    def from_binary(cls, data: bytes) -> "Artifact":
+        if len(data) < BINARY_HEADER.size:
+            raise ValueError("Bytecode imeharibika / Corrupt bytecode")
+        magic, version, size = BINARY_HEADER.unpack_from(data)
+        if magic != BINARY_MAGIC:
+            raise ValueError("Hii si faili ya bytecode ya Kiswahili / "
+                             "Not a Kiswahili bytecode file")
+        if version not in (1, VERSION):
+            raise ValueError(f"Toleo la bytecode halijulikani: {version} / "
+                             f"Unknown bytecode version: {version}")
+        payload = data[BINARY_HEADER.size:BINARY_HEADER.size + size]
+        try:
+            text = zlib.decompress(payload).decode("utf-8")
+        except (zlib.error, UnicodeDecodeError) as exc:
+            raise ValueError(f"Bytecode imeharibika / Corrupt bytecode: {exc}") from None
+        return cls.from_json(text)
+
+    @classmethod
     def load(cls, path: str) -> "Artifact":
-        with open(path, "r", encoding="utf-8") as handle:
-            return cls.from_json(handle.read())
+        with open(path, "rb") as handle:
+            data = handle.read()
+        if data[:BINARY_HEADER.size].startswith(BINARY_MAGIC):
+            return cls.from_binary(data)
+        return cls.from_json(data.decode("utf-8"))
 
 
 def _code_to_json(code: CodeObject) -> dict[str, Any]:

@@ -4,7 +4,9 @@ Run with:  python -m unittest discover -s tests
 """
 
 import io
+import json
 import os
+import random
 import sys
 import tempfile
 import unittest
@@ -15,7 +17,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from swahili import (Artifact, Interpreter, KiswahiliError, VM, compile_source,
                      disassemble)
 from swahili.cli import main
-from swahili.compiler.code import output_path_for
+from swahili.compiler.code import (VERSION as BYTECODE_VERSION,
+                                   hash_source, output_path_for)
 
 
 PROGRAMS = {
@@ -207,6 +210,94 @@ class CompilerVmTests(unittest.TestCase):
             self.assertEqual(
                 main(["--engine", "vm", "-c", 'andika "vm cli"']), 0)
         self.assertEqual(buffer.getvalue(), "vm cli\n")
+
+
+    def test_expression_spans_reach_vm_errors(self):
+        source = "\n\nandika jina_isiyokuwepo\n"
+        with self.assertRaises(KiswahiliError) as caught:
+            VM().run_source(source, "span.kisw")
+        error = caught.exception
+        self.assertEqual(error.line, 3)
+        self.assertEqual(error.index, source.index("jina_isiyokuwepo"))
+
+    def test_artifact_v2_validates_source_hash_and_migrates_v1(self):
+        source = 'andika "habari"\n'
+        artifact = Artifact(1, "t.kisw", source,
+                            compile_source(source, "t.kisw"))
+        data = artifact.to_dict()
+        self.assertEqual(data["version"], BYTECODE_VERSION)
+        self.assertEqual(data["source_hash"], hash_source(source))
+
+        legacy = dict(data)
+        legacy["version"] = 1
+        legacy.pop("source_hash")
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "legacy.kiswc")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(json.dumps(legacy))
+            loaded = Artifact.load(path)
+            self.assertEqual(loaded.version, BYTECODE_VERSION)
+            self.assertEqual(loaded.source_hash, hash_source(source))
+
+        bad = loaded.to_dict()
+        bad["source_hash"] = "0" * 64
+        with self.assertRaises(ValueError):
+            Artifact.from_dict(bad)
+
+    def test_vm_caches_imported_modules_and_revalidates(self):
+        with tempfile.TemporaryDirectory() as folder:
+            module = os.path.join(folder, "hesabu_local.kisw")
+            cache = output_path_for(module)
+
+            def write_module(factor: int) -> None:
+                with open(module, "w", encoding="utf-8") as handle:
+                    handle.write(f"kazi mbili(x) {{ rudia x * {factor} }}\n")
+
+            source = ("tumia hesabu_local\n"
+                      "andika hesabu_local.mbili(21)\n")
+            write_module(2)
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                VM(search_paths=[folder]).run_source(source, "main.kisw")
+            self.assertEqual(buffer.getvalue(), "42\n")
+            self.assertTrue(os.path.isfile(cache))
+
+            write_module(3)
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                VM(search_paths=[folder]).run_source(source, "main.kisw")
+            self.assertEqual(buffer.getvalue(), "63\n")
+
+            with open(cache, "wb") as handle:
+                handle.write(b"garbage")
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                VM(search_paths=[folder]).run_source(source, "main.kisw")
+            self.assertEqual(buffer.getvalue(), "63\n")
+
+            os.remove(cache)
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                VM(search_paths=[folder],
+                   bytecode_cache=False).run_source(source, "main.kisw")
+            self.assertEqual(buffer.getvalue(), "63\n")
+            self.assertFalse(os.path.isfile(cache))
+
+    def test_differential_fuzz_against_interpreter(self):
+        rng = random.Random(20261121)
+        for case in range(25):
+            lines = []
+            for _ in range(6):
+                left = rng.randint(0, 20)
+                right = rng.randint(1, 9)
+                op = rng.choice(("+", "-", "*", "//", "%"))
+                lines.append(f"andika {left} {op} {right}")
+            if rng.random() < 0.5:
+                lines.append("kazi f(x) { rudia x * 2 }")
+                lines.append(f"andika f({rng.randint(0, 9)})")
+            source = "\n".join(lines) + "\n"
+            with self.subTest(case=case):
+                self.assertEqual(execute(source), interpret(source))
 
 
 if __name__ == "__main__":

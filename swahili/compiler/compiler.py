@@ -31,7 +31,10 @@ class Compiler:
 
     def _emit(self, op: Opcode, arg: Any = 0, arg2: Any = None,
               arg3: Any = None, node: ast.Node | None = None) -> int:
-        return self.code.emit(op, arg, arg2, arg3, self._line_of(node))
+        return self.code.emit(
+            op, arg, arg2, arg3, self._line_of(node),
+            getattr(node, "column", 0) if node is not None else 0,
+            getattr(node, "index", 0) if node is not None else 0)
 
     def _const(self, value: Any) -> int:
         return self.code.constant(value)

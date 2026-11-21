@@ -13,7 +13,9 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-from ..compiler.code import Artifact, ClassSpec, CodeObject, FunctionSpec
+from ..compiler.code import (VERSION as BYTECODE_VERSION, Artifact, ClassSpec,
+                             CodeObject, FunctionSpec, hash_source,
+                             output_path_for)
 from ..compiler.compiler import compile_source
 from ..compiler.opcode import Opcode
 from ..errors import (Endelea, KiswahiliError, Kosa, Rudeia, RuntimeErr,
@@ -108,8 +110,10 @@ class VM(Interpreter):
     """Bytecode virtual machine, API-compatible with :class:`Interpreter`."""
 
     def __init__(self, *args: Any, **kwargs: Any):
+        self.bytecode_cache = bool(kwargs.pop("bytecode_cache", True))
         super().__init__(*args, **kwargs)
         self.exec_frames: list[Frame] = []
+        self._current_position = (0, 0, 0)
 
     # --- public entry points ----------------------------------------------
 
@@ -157,6 +161,8 @@ class VM(Interpreter):
             while frame.ip < len(instructions):
                 instruction = instructions[frame.ip]
                 frame.ip += 1
+                self._current_position = (instruction.line, instruction.column,
+                                          instruction.index)
                 self._tick(instruction.line)
                 try:
                     self._step(frame, instruction)
@@ -220,8 +226,12 @@ class VM(Interpreter):
                    hint: str = "") -> KiswahiliError:
         if self.frames and line:
             _, source = self.frames[-1]
+            position = self._current_position
+            index = position[2] if position[0] == line and position[2] else 0
+            if not index:
+                index = _index_of_line(source, line)
             return Kosa("Kisimuwili / VM", swahili, english or swahili,
-                        source, _index_of_line(source, line), hint)
+                        source, index, hint)
         return RuntimeErr(swahili, english or swahili, line=line)
 
     # --- instruction dispatch ---------------------------------------------
@@ -816,6 +826,30 @@ class VM(Interpreter):
             binding = alias or module_name
         frame.scope.define(binding, module)
 
+    def _run_cached_module(self, path: str, source: str,
+                           env: Environment) -> None:
+        artifact_path = output_path_for(path)
+        artifact = None
+        if self.bytecode_cache and os.path.isfile(artifact_path):
+            try:
+                artifact = Artifact.load(artifact_path)
+            except (OSError, ValueError):
+                artifact = None
+            else:
+                if (artifact.source != source
+                        or artifact.source_hash != hash_source(source)):
+                    artifact = None
+        if artifact is not None:
+            self.run_code(artifact.code, env)
+            return
+        code = compile_source(source, path)
+        if self.bytecode_cache:
+            try:
+                Artifact(BYTECODE_VERSION, path, source, code).save(artifact_path)
+            except OSError:
+                pass
+        self.run_code(code, env)
+
     def load_module_path(self, path: str, node=None) -> KiswahiliModule:
         base = path
         if not os.path.isabs(base):
@@ -836,7 +870,7 @@ class VM(Interpreter):
         module_env = Environment(self.builtin_env)
         self.search_paths.insert(0, os.path.dirname(full))
         try:
-            self.run_source(source, full, module_env)
+            self._run_cached_module(full, source, module_env)
         finally:
             self.search_paths.pop(0)
         module = KiswahiliModule(name, dict(module_env.vars))
@@ -863,7 +897,7 @@ class VM(Interpreter):
             with open(path, "r", encoding="utf-8") as handle:
                 source = handle.read()
             module_env = Environment(self.builtin_env)
-            self.run_source(source, path, module_env)
+            self._run_cached_module(path, source, module_env)
             module = KiswahiliModule(name, dict(module_env.vars))
             self.modules[name] = module
             return module
