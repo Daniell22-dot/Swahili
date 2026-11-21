@@ -191,8 +191,8 @@ python -m unittest discover -s tests
 ## Status
 
 Kiswahili is an early-stage project (v0.1). The core language, standard
-library, examples, and tests are in place. Expect rough edges and ongoing
-change.
+library, bytecode compiler, VM, examples, and tests are in place. Expect rough
+edges and ongoing change.
 
 ## License
 
